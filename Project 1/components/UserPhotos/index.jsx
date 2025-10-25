@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Paper, Typography, Divider } from '@mui/material';
+import { Paper, Typography, Divider, Box } from '@mui/material';
 import './styles.css';
 
 export default function UserPhotos() {
   const { userId } = useParams();
   const [photos, setPhotos] = useState([]);
 
+  // Load photos once per userId change
   useEffect(() => {
     let mounted = true;
+
     async function loadPhotos() {
       try {
         const { data } = await axios.get(`/photosOfUser/${userId}`);
@@ -18,49 +20,47 @@ export default function UserPhotos() {
         console.error('Failed to load photos:', err);
       }
     }
+
     loadPhotos();
-    return () => {
-      mounted = false;
-    };
+    return () => (mounted = false);
   }, [userId]);
 
-  if (!photos.length) return <Typography>Loading...</Typography>;
+  if (!photos.length) return <Typography sx={{ p: 2 }}>Loading...</Typography>;
 
   return (
-    <div style={{ padding: '12px' }}>
+    <Box className='photos-container'>
       {photos.map((p) => (
-        <Paper
-          key={p._id}
-          elevation={1}
-          style={{ padding: '12px', marginBottom: '16px' }}
-        >
+        <Paper key={p._id} elevation={1} className='photo-card'>
+          {/* IMAGE */}
           <img
             src={`/images/${p.file_name}`}
             alt='user upload'
-            style={{ width: '100%', maxWidth: '500px', borderRadius: '6px' }}
+            className='photo-img'
           />
 
-          <Typography variant='caption' display='block' sx={{ mt: 1, mb: 1 }}>
+          {/* UPLOAD TIME */}
+          <Typography variant='caption' className='upload-time'>
             Uploaded: {new Date(p.date_time).toLocaleString()}
           </Typography>
 
+          {/* COMMENTS */}
           {p.comments?.map((c) => (
-            <div key={c._id} style={{ marginTop: '8px', paddingLeft: '8px' }}>
-              <Typography variant='body2' sx={{ mb: 0.5 }}>
-                <Link to={`/users/${c.user._id}`}>
+            <Box key={c._id} className='comment-bubble'>
+              <Typography variant='body2' className='comment-header'>
+                <Link to={`/users/${c.user._id}`} className='comment-user'>
                   {c.user.first_name} {c.user.last_name}
                 </Link>
-                {' — '}
+                {' · '}
                 {new Date(c.date_time).toLocaleString()}
               </Typography>
-              <Typography variant='body2' sx={{ ml: 2 }}>
+
+              <Typography variant='body2' className='comment-text'>
                 {c.comment}
               </Typography>
-              <Divider sx={{ mt: 1 }} />
-            </div>
+            </Box>
           ))}
         </Paper>
       ))}
-    </div>
+    </Box>
   );
 }
