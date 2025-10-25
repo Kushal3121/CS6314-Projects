@@ -1,49 +1,46 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
 import {
-  Divider,
   List,
-  ListItem,
+  ListItemButton,
   ListItemText,
   Typography,
+  Paper,
 } from '@mui/material';
-
 import './styles.css';
 
-function UserList() {
+export default function UserList() {
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadUsers() {
+      try {
+        const { data } = await axios.get('/user/list'); // mock mode returns mock users
+        if (mounted) setUsers(data);
+      } catch (err) {
+        console.error('Failed to load users:', err);
+      }
+    }
+    loadUsers();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
-    <div>
-      <Typography variant="body1">
-        This is the user list, which takes up 3/12 of the window. You might
-        choose to use
-        {' '}
-        <a href="https://mui.com/components/lists/" rel="noreferrer" target="_blank">Lists</a>
-        {' '}
-        and
-        {' '}
-        <a href="https://mui.com/components/dividers/" rel="noreferrer" target="_blank">Dividers</a>
-        {' '}
-        to
-        display your users like so:
+    <Paper elevation={0} style={{ padding: '8px' }}>
+      <Typography variant='subtitle2' style={{ marginBottom: '8px' }}>
+        Users
       </Typography>
-      <List component="nav">
-        <ListItem>
-          <ListItemText primary="Item #1" />
-        </ListItem>
-        <Divider />
-        <ListItem>
-          <ListItemText primary="Item #2" />
-        </ListItem>
-        <Divider />
-        <ListItem>
-          <ListItemText primary="Item #3" />
-        </ListItem>
-        <Divider />
+      <List dense>
+        {users.map((u) => (
+          <ListItemButton key={u._id} component={Link} to={`/users/${u._id}`}>
+            <ListItemText primary={`${u.first_name} ${u.last_name}`} />
+          </ListItemButton>
+        ))}
       </List>
-      <Typography variant="body1">
-        The model comes in from API: /user/list
-      </Typography>
-    </div>
+    </Paper>
   );
 }
-
-export default UserList;
