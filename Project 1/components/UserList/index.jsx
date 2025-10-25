@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -17,7 +17,7 @@ export default function UserList() {
     let mounted = true;
     async function loadUsers() {
       try {
-        const { data } = await axios.get('/user/list'); // mock mode returns mock users
+        const { data } = await axios.get('/user/list');
         if (mounted) setUsers(data);
       } catch (err) {
         console.error('Failed to load users:', err);

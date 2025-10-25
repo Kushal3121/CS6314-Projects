@@ -1,17 +1,14 @@
 import React from 'react';
-// eslint-disable-next-line import/no-extraneous-dependencies
 import ReactDOM from 'react-dom/client';
-import { Grid, Typography, Paper } from '@mui/material';
+import { Grid, Paper } from '@mui/material';
 import { BrowserRouter, Route, Routes, useParams } from 'react-router-dom';
-
 import './styles/main.css';
-// Import mock setup - Remove this once you have implemented the actual API calls
-// import './lib/mockSetup.js';
+import axios from 'axios';
 import TopBar from './components/TopBar';
 import UserDetail from './components/UserDetail';
 import UserList from './components/UserList';
 import UserPhotos from './components/UserPhotos';
-import axios from 'axios';
+
 axios.defaults.baseURL = 'http://localhost:3001';
 
 function UserDetailRoute() {

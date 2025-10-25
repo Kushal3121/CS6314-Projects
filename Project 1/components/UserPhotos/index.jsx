@@ -1,5 +1,5 @@
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Paper, Typography, Divider } from '@mui/material';
 import './styles.css';

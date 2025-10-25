@@ -10,7 +10,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const portno = 3001;
-
 const app = express();
 
 // Enable CORS for all routes
@@ -22,36 +21,35 @@ app.use((req, res, next) => {
     'Origin, X-Requested-With, Content-Type, Accept, Authorization'
   );
   if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
+    return res.sendStatus(200);
   }
+  return next();
 });
 
-// Serve all static files
+// Serve static files
 app.use(express.static(__dirname));
 
 app.get('/', (req, res) => {
-  res.send(`Simple web server of files from ${__dirname}`);
+  return res.send(`Simple web server of files from ${__dirname}`);
 });
 
 /**
- * Returns schemaInfo for testing
+ * /test/info
  */
 app.get('/test/info', (req, res) => {
   const info = models.schemaInfo2();
-  res.status(200).send(info);
+  return res.status(200).send(info);
 });
 
 /**
- * URL /user/list - Returns all users
+ * /user/list
  */
 app.get('/user/list', (req, res) => {
-  res.status(200).send(models.userListModel());
+  return res.status(200).send(models.userListModel());
 });
 
 /**
- * URL /user/:id - Returns one user
+ * /user/:id
  */
 app.get('/user/:id', (req, res) => {
   const userId = req.params.id;
@@ -61,12 +59,11 @@ app.get('/user/:id', (req, res) => {
     console.error(`User not found: ${userId}`);
     return res.status(404).send({ message: 'User not found' });
   }
-
-  res.status(200).send(user);
+  return res.status(200).send(user);
 });
 
 /**
- * URL /photosOfUser/:id - Returns photos (with comments) for that user
+ * /photosOfUser/:id
  */
 app.get('/photosOfUser/:id', (req, res) => {
   const userId = req.params.id;
@@ -76,8 +73,7 @@ app.get('/photosOfUser/:id', (req, res) => {
     console.error(`No photos for user: ${userId}`);
     return res.status(404).send({ message: 'No photos for this user' });
   }
-
-  res.status(200).send(photos);
+  return res.status(200).send(photos);
 });
 
 const server = app.listen(portno, () => {
