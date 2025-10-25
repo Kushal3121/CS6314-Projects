@@ -1,11 +1,11 @@
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Paper, Typography, Stack } from '@mui/material';
 import './styles.css';
 
 export default function UserDetail() {
-  const { userId } = useParams(); // extract from URL
+  const { userId } = useParams();
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -38,7 +38,6 @@ export default function UserDetail() {
         <Typography variant='body2'>Description: {user.description}</Typography>
       </Stack>
 
-      {/* Link to Photos */}
       <Link to={`/photos/${user._id}`} style={{ color: '#1976d2' }}>
         View Photos
       </Link>
