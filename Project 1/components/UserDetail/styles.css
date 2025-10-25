@@ -1,0 +1,26 @@
+.user-detail-card {
+  padding: 16px;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.user-detail-name {
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #222;
+}
+
+.user-detail-meta {
+  margin-bottom: 16px;
+}
+
+.detail-loading {
+  padding: 16px;
+  text-align: center;
+  color: gray;
+}
+
+.view-photos-btn {
+  text-transform: none;
+  font-weight: 500;
+}

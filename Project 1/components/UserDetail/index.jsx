@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Paper, Typography, Stack } from '@mui/material';
+import { Paper, Typography, Stack, Button } from '@mui/material';
 import './styles.css';
 
 export default function UserDetail() {
@@ -24,23 +24,30 @@ export default function UserDetail() {
     };
   }, [userId]);
 
-  if (!user) return <Typography>Loading...</Typography>;
+  if (!user)
+    return <Typography className='detail-loading'>Loading...</Typography>;
 
   return (
-    <Paper elevation={0} style={{ padding: '16px' }}>
-      <Typography variant='h6' gutterBottom>
+    <Paper elevation={1} className='user-detail-card'>
+      <Typography variant='h6' className='user-detail-name'>
         {user.first_name} {user.last_name}
       </Typography>
 
-      <Stack spacing={0.5} sx={{ mb: 2 }}>
-        <Typography variant='body2'>Location: {user.location}</Typography>
-        <Typography variant='body2'>Occupation: {user.occupation}</Typography>
-        <Typography variant='body2'>Description: {user.description}</Typography>
+      <Stack spacing={0.5} className='user-detail-meta'>
+        <Typography variant='body2'>📍 {user.location}</Typography>
+        <Typography variant='body2'>💼 {user.occupation}</Typography>
+        <Typography variant='body2'>📝 {user.description}</Typography>
       </Stack>
 
-      <Link to={`/photos/${user._id}`} style={{ color: '#1976d2' }}>
+      <Button
+        variant='contained'
+        size='small'
+        component={Link}
+        to={`/photos/${user._id}`}
+        className='view-photos-btn'
+      >
         View Photos
-      </Link>
+      </Button>
     </Paper>
   );
 }
