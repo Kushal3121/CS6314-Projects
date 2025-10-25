@@ -1,0 +1,27 @@
+.userlist-card {
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.userlist-title {
+  margin-bottom: 6px;
+  font-weight: 600;
+  padding-left: 12px;
+  padding-bottom: 8px;
+}
+
+.userlist-divider {
+  margin-bottom: 8px;
+}
+
+.userlist-item {
+  border-radius: 6px;
+}
+
+.Mui-selected {
+  background-color: rgba(25, 118, 210, 0.12) !important;
+}
+
+.Mui-selected:hover {
+  background-color: rgba(25, 118, 210, 0.18) !important;
+}
