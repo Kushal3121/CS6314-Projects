@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Paper, Typography, Divider, Box } from '@mui/material';
+import { Paper, Typography, Box } from '@mui/material';
 import './styles.css';
 
 export default function UserPhotos() {
@@ -22,7 +22,11 @@ export default function UserPhotos() {
     }
 
     loadPhotos();
-    return () => (mounted = false);
+
+    // ✅ FIX: do not return assignment
+    return () => {
+      mounted = false;
+    };
   }, [userId]);
 
   if (!photos.length) return <Typography sx={{ p: 2 }}>Loading...</Typography>;

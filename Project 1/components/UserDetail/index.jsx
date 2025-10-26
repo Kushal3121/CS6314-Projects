@@ -35,8 +35,9 @@ export default function UserDetail() {
   }, [userId]);
 
   // Loading UI while fetching user data
-  if (!user)
+  if (!user) {
     return <Typography className='detail-loading'>Loading...</Typography>;
+  }
 
   return (
     <Paper elevation={1} className='user-detail-card'>
