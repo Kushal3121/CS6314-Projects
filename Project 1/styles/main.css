@@ -9,7 +9,7 @@
   margin-top: 70px;
 }
 
-.main-grid-item{
-  height: calc(100vh - 64px);
+.main-grid-item {
+  /* height: calc(100vh - 64px); */
   padding: 10px;
 }
