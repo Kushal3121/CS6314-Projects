@@ -40,7 +40,7 @@ export default function UserDetail() {
   }
 
   return (
-    <Paper elevation={1} className='user-detail-card'>
+    <Paper elevation={0} className='user-detail-card'>
       {/* User full name */}
       <Typography variant='h6' className='user-detail-name'>
         {user.first_name} {user.last_name}
