@@ -41,7 +41,7 @@ export default function UserList() {
   }, []);
 
   return (
-    <Paper elevation={1} className='userlist-card'>
+    <Paper elevation={0} className='userlist-card'>
       {/* Section title */}
       <Typography variant='subtitle2' className='userlist-title'>
         Users
