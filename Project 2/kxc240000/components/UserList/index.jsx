@@ -54,8 +54,8 @@ export default function UserList() {
         {users.map((u) => {
           // Highlight if current route matches this user
           const isSelected =
-            location.pathname === `/users/${u._id}` ||
-            location.pathname === `/photos/${u._id}`;
+            location.pathname.startsWith(`/users/${u._id}`) ||
+            location.pathname.startsWith(`/photos/${u._id}`);
 
           return (
             <ListItemButton
