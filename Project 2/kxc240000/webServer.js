@@ -62,26 +62,35 @@ app.get('/', function (request, response) {
  *              This is good for testing connectivity with MongoDB.
  */
 
-app.get('/test/info', (request, response) => {
-  const info = models.schemaInfo();
-  response.status(200).send(info);
+app.get('/test/info', async (req, res) => {
+  try {
+    const info = await SchemaInfo.findOne({}).lean();
+    res.status(200).json(info || { message: 'No schema info found' });
+  } catch (err) {
+    console.error('Error in /test/info:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 /**
  * /test/counts - Returns an object with the counts of the different collections
  *                in JSON format.
  */
-app.get('/test/counts', (request, response) => {
-  const users = models.userListModel();
-  let photoCount = 0;
-  users.forEach((user) => {
-    photoCount += models.photoOfUserModel(user._id).length;
-  });
-  response.status(200).send({
-    user: users.length,
-    photo: photoCount,
-    schemaInfo: 1,
-  });
+app.get('/test/counts', async (req, res) => {
+  try {
+    const userCount = await User.countDocuments({});
+    const photoCount = await Photo.countDocuments({});
+    const schemaInfoCount = await SchemaInfo.countDocuments({});
+
+    res.status(200).json({
+      user: userCount,
+      photo: photoCount,
+      schemaInfo: schemaInfoCount,
+    });
+  } catch (err) {
+    console.error('Error in /test/counts:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 /**
@@ -130,20 +139,46 @@ app.get('/user/:id', async (req, res) => {
 /**
  * URL /photosOfUser/:id - Returns the Photos for User (id).
  */
-app.get('/photosOfUser/:id', (request, response) => {
-  const photos = models.photoOfUserModel(request.params.id);
-  if (!photos || photos.length === 0) {
-    return response.status(404).send({ error: 'Photos not found' });
+app.get('/photosOfUser/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'Invalid user ID format' });
   }
-  return response.status(200).send(photos);
+
+  try {
+    // Find all photos belonging to the given user
+    const photos = await Photo.find({ user_id: id })
+      .select('_id user_id comments file_name date_time')
+      .lean();
+
+    if (!photos || photos.length === 0) {
+      return res.status(404).json({ message: 'No photos found for this user' });
+    }
+
+    // For each comment, populate commenter info manually
+    for (const photo of photos) {
+      for (const comment of photo.comments) {
+        const user = await User.findById(
+          comment.user_id,
+          '_id first_name last_name'
+        ).lean();
+
+        comment.user = user || null; // Attach minimal user info
+        delete comment.user_id; // remove redundant user_id field
+      }
+    }
+
+    return res.status(200).json(photos);
+  } catch (err) {
+    console.error('Error in /photosOfUser/:id:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
-const server = app.listen(portno, function () {
+const server = app.listen(portno, () => {
   const port = server.address().port;
   console.log(
-    'Listening at http://localhost:' +
-      port +
-      ' exporting the directory ' +
-      __dirname
+    `Listening at http://localhost:${port} exporting the directory ${__dirname}`
   );
 });
