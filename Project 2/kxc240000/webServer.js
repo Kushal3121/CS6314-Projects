@@ -5,21 +5,21 @@
  */
 
 // eslint-disable-next-line import/no-extraneous-dependencies
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 // eslint-disable-next-line import/no-extraneous-dependencies
-import bluebird from "bluebird";
-import express from "express";
+import bluebird from 'bluebird';
+import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
 // ToDO - Your submission should work without this line. Comment out or delete this line for tests and before submission!
-import models from "./modelData/photoApp.js";
+// import models from "./modelData/photoApp.js";
 
 // Load the Mongoose schema for User, Photo, and SchemaInfo
 // ToDO - Your submission will use code below, so make sure to uncomment this line for tests and before submission!
-// import User from "./schema/user.js";
-// import Photo from "./schema/photo.js";
-// import SchemaInfo from "./schema/schemaInfo.js";
+import User from './schema/user.js';
+import Photo from './schema/photo.js';
+import SchemaInfo from './schema/schemaInfo.js';
 
 const portno = 3001; // Port number to use
 const app = express();
@@ -28,7 +28,10 @@ const app = express();
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+  );
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
   } else {
@@ -37,8 +40,8 @@ app.use((req, res, next) => {
 });
 
 mongoose.Promise = bluebird;
-mongoose.set("strictQuery", false);
-mongoose.connect("mongodb://127.0.0.1/project2", {
+mongoose.set('strictQuery', false);
+mongoose.connect('mongodb://127.0.0.1/project2', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
@@ -50,8 +53,8 @@ const __dirname = dirname(__filename);
 // (http://expressjs.com/en/starter/static-files.html) do all the work for us.
 app.use(express.static(__dirname));
 
-app.get("/", function (request, response) {
-  response.send("Simple web server of files from " + __dirname);
+app.get('/', function (request, response) {
+  response.send('Simple web server of files from ' + __dirname);
 });
 
 /**
@@ -77,27 +80,51 @@ app.get('/test/counts', (request, response) => {
   response.status(200).send({
     user: users.length,
     photo: photoCount,
-    schemaInfo: 1
+    schemaInfo: 1,
   });
 });
 
 /**
  * URL /user/list - Returns all the User objects.
  */
-app.get('/user/list', (request, response) => {
-  response.status(200).send(models.userListModel());
+app.get('/user/list', async (req, res) => {
+  try {
+    // Only return sidebar-needed fields
+    const users = await User.find({}, '_id first_name last_name').lean();
+    res.status(200).json(users);
+  } catch (err) {
+    console.error('Error in /user/list:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 /**
  * URL /user/:id - Returns the information for User (id).
  */
-app.get('/user/:id', (request, response) => {
-  const user = models.userModel(request.params.id);
-  if (!user) {
-    response.status(400).send("Not found");
-    return;
+app.get('/user/:id', async (req, res) => {
+  const { id } = req.params;
+
+  // Validate that the id is a proper MongoDB ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'Invalid user ID format' });
   }
-  response.status(200).send(user);
+
+  try {
+    // Fetch only the fields needed by the frontend
+    const user = await User.findById(
+      id,
+      '_id first_name last_name location description occupation'
+    ).lean();
+
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+
+    return res.status(200).json(user);
+  } catch (err) {
+    console.error('Error in /user/:id:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 /**
@@ -114,9 +141,9 @@ app.get('/photosOfUser/:id', (request, response) => {
 const server = app.listen(portno, function () {
   const port = server.address().port;
   console.log(
-    "Listening at http://localhost:" +
+    'Listening at http://localhost:' +
       port +
-      " exporting the directory " +
+      ' exporting the directory ' +
       __dirname
   );
 });
