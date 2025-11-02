@@ -8,6 +8,7 @@ import TopBar from './components/TopBar';
 import UserDetail from './components/UserDetail';
 import UserList from './components/UserList';
 import UserPhotos from './components/UserPhotos';
+import UserComments from './components/UserComments';
 
 // Set base URL for backend
 axios.defaults.baseURL = 'http://localhost:3001';
@@ -24,6 +25,11 @@ function UserDetailRoute() {
 function UserPhotosRoute() {
   const { userId } = useParams();
   return <UserPhotos userId={userId} />;
+}
+
+function UserCommentsRoute() {
+  const { userId } = useParams();
+  return <UserComments userId={userId} />;
 }
 
 function PhotoShare() {
@@ -51,9 +57,17 @@ function PhotoShare() {
                 <Routes>
                   <Route path='/users/:userId' element={<UserDetailRoute />} />
                   <Route
-                    path='/photos/:userId/*'
+                    path='/comments/:userId'
+                    element={<UserCommentsRoute />}
+                  />
+
+                  {/* photos list + optional specific photo */}
+                  <Route path='/photos/:userId' element={<UserPhotosRoute />} />
+                  <Route
+                    path='/photos/:userId/:photoId'
                     element={<UserPhotosRoute />}
                   />
+
                   <Route path='/users' element={<UserList />} />
                 </Routes>
               </Paper>

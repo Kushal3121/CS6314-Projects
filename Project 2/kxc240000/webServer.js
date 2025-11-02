@@ -4,24 +4,17 @@
  * Client uses axios to call these endpoints.
  */
 
-// eslint-disable-next-line import/no-extraneous-dependencies
 import mongoose from 'mongoose';
-// eslint-disable-next-line import/no-extraneous-dependencies
 import bluebird from 'bluebird';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
-// ToDO - Your submission should work without this line. Comment out or delete this line for tests and before submission!
-// import models from "./modelData/photoApp.js";
-
-// Load the Mongoose schema for User, Photo, and SchemaInfo
-// ToDO - Your submission will use code below, so make sure to uncomment this line for tests and before submission!
 import User from './schema/user.js';
 import Photo from './schema/photo.js';
 import SchemaInfo from './schema/schemaInfo.js';
 
-const portno = 3001; // Port number to use
+const portno = 3001;
 const app = express();
 
 // Enable CORS for all routes
@@ -48,20 +41,13 @@ mongoose.connect('mongodb://127.0.0.1/project2', {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// We have the express static module
-// (http://expressjs.com/en/starter/static-files.html) do all the work for us.
 app.use(express.static(__dirname));
 
-app.get('/', function (request, response) {
-  response.send('Simple web server of files from ' + __dirname);
+app.get('/', (req, res) => {
+  res.send('Simple web server of files from ' + __dirname);
 });
 
-/**
- * /test/info - Returns the SchemaInfo object of the database in JSON format.
- *              This is good for testing connectivity with MongoDB.
- */
-
+/* ---------- TEST ROUTES ---------- */
 app.get('/test/info', async (req, res) => {
   try {
     const info = await SchemaInfo.findOne({}).lean();
@@ -72,16 +58,11 @@ app.get('/test/info', async (req, res) => {
   }
 });
 
-/**
- * /test/counts - Returns an object with the counts of the different collections
- *                in JSON format.
- */
 app.get('/test/counts', async (req, res) => {
   try {
     const userCount = await User.countDocuments({});
     const photoCount = await Photo.countDocuments({});
     const schemaInfoCount = await SchemaInfo.countDocuments({});
-
     res.status(200).json({
       user: userCount,
       photo: photoCount,
@@ -93,12 +74,11 @@ app.get('/test/counts', async (req, res) => {
   }
 });
 
-/**
- * URL /user/list - Returns all the User objects.
- */
+/* ---------- MAIN ROUTES ---------- */
+
+// Get list of all users
 app.get('/user/list', async (req, res) => {
   try {
-    // Only return sidebar-needed fields
     const users = await User.find({}, '_id first_name last_name').lean();
     res.status(200).json(users);
   } catch (err) {
@@ -107,48 +87,70 @@ app.get('/user/list', async (req, res) => {
   }
 });
 
-/**
- * URL /user/:id - Returns the information for User (id).
- */
-app.get('/user/:id', async (req, res) => {
-  const { id } = req.params;
-
-  // Validate that the id is a proper MongoDB ObjectId
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ message: 'Invalid user ID format' });
-  }
-
+// Return photo + comment counts per user
+app.get('/user/counts', async (req, res) => {
   try {
-    // Fetch only the fields needed by the frontend
-    const user = await User.findById(
-      id,
-      '_id first_name last_name location description occupation'
-    ).lean();
+    const users = await User.find({}, '_id first_name last_name').lean();
+    const photos = await Photo.find({}).lean();
 
-    if (!user) {
-      return res.status(400).json({ message: 'User not found' });
+    const counts = users.map((u) => ({
+      _id: u._id.toString(),
+      photoCount: 0,
+      commentCount: 0,
+    }));
+
+    for (const photo of photos) {
+      const userId = photo.user_id?.toString?.() || photo.user_id;
+      if (userId) {
+        const userMatch = counts.find((c) => c._id === userId);
+        if (userMatch) userMatch.photoCount += 1;
+      }
+
+      for (const c of photo.comments || []) {
+        const commenterId = c.user_id?.toString?.() || c.user_id;
+        if (commenterId) {
+          const commenter = counts.find((x) => x._id === commenterId);
+          if (commenter) commenter.commentCount += 1;
+        }
+      }
     }
 
-    return res.status(200).json(user);
+    res.status(200).json(counts);
   } catch (err) {
-    console.error('Error in /user/:id:', err);
-    return res.status(500).json({ message: 'Internal server error' });
+    console.error('Error in /user/counts:', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-/**
- * URL /photosOfUser/:id - Returns the Photos for User (id).
- */
+// Get user details by ID
+app.get('/user/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const user =
+      (await User.findById(
+        id,
+        '_id first_name last_name location description occupation'
+      ).lean()) ||
+      (await User.findOne(
+        { _id: id },
+        '_id first_name last_name location description occupation'
+      ).lean());
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.status(200).json(user);
+  } catch (err) {
+    console.error('Error in /user/:id:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Get photos of a specific user
 app.get('/photosOfUser/:id', async (req, res) => {
   const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ message: 'Invalid user ID format' });
-  }
-
   try {
-    // Find all photos belonging to the given user
-    const photos = await Photo.find({ user_id: id })
+    const photos = await Photo.find({
+      $or: [{ user_id: id }, { user_id: new mongoose.Types.ObjectId(id) }],
+    })
       .select('_id user_id comments file_name date_time')
       .lean();
 
@@ -156,26 +158,59 @@ app.get('/photosOfUser/:id', async (req, res) => {
       return res.status(404).json({ message: 'No photos found for this user' });
     }
 
-    // For each comment, populate commenter info manually
+    // Populate commenter info
     for (const photo of photos) {
-      for (const comment of photo.comments) {
-        const user = await User.findById(
-          comment.user_id,
+      for (const comment of photo.comments || []) {
+        const commenterId = comment.user_id?.toString?.() || comment.user_id;
+        const user = await User.findOne(
+          { _id: commenterId },
           '_id first_name last_name'
         ).lean();
-
-        comment.user = user || null; // Attach minimal user info
-        delete comment.user_id; // remove redundant user_id field
+        comment.user = user || null;
+        delete comment.user_id;
       }
     }
 
-    return res.status(200).json(photos);
+    res.status(200).json(photos);
   } catch (err) {
     console.error('Error in /photosOfUser/:id:', err);
-    return res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
+// Return all comments authored by a user (with thumbnails)
+app.get('/commentsOfUser/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const photos = await Photo.find({
+      'comments.user_id': { $in: [id, new mongoose.Types.ObjectId(id)] },
+    })
+      .select('_id user_id file_name comments')
+      .lean();
+
+    const result = [];
+    for (const photo of photos) {
+      for (const c of photo.comments || []) {
+        if ((c.user_id?.toString?.() || c.user_id) === id) {
+          result.push({
+            photo_id: photo._id,
+            owner_id: photo.user_id?.toString?.() || photo.user_id,
+            file_name: photo.file_name,
+            comment: c.comment,
+            date_time: c.date_time,
+          });
+        }
+      }
+    }
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('Error in /commentsOfUser/:id', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+/* ---------- START SERVER ---------- */
 const server = app.listen(portno, () => {
   const port = server.address().port;
   console.log(

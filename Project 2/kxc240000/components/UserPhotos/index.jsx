@@ -6,7 +6,7 @@ import './styles.css';
 import { AdvancedFeaturesContext } from '../../photoShare.jsx';
 
 export default function UserPhotos() {
-  const { userId } = useParams();
+  const { userId, photoId } = useParams();
   const [photos, setPhotos] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const navigate = useNavigate();
@@ -30,16 +30,25 @@ export default function UserPhotos() {
     };
   }, [userId]);
 
-  // When URL ends with /photos/:userId/:photoIndex, use that index
+  // Sync currentIndex from optional URL segment: supports numeric index OR photoId
   useEffect(() => {
-    const parts = location.pathname.split('/');
-    const maybeIndex = parseInt(parts[3], 10);
-    if (!Number.isNaN(maybeIndex)) {
-      setCurrentIndex(maybeIndex);
-    } else {
+    if (!photos.length) return;
+
+    if (photoId === undefined) {
       setCurrentIndex(0);
+      return;
     }
-  }, [location.pathname]);
+
+    const maybeIndex = Number(photoId);
+    if (Number.isFinite(maybeIndex) && !Number.isNaN(maybeIndex)) {
+      const bounded = Math.max(0, Math.min(photos.length - 1, maybeIndex));
+      setCurrentIndex(bounded);
+      return;
+    }
+
+    const byIdIndex = photos.findIndex((p) => p._id === photoId);
+    setCurrentIndex(byIdIndex >= 0 ? byIdIndex : 0);
+  }, [photoId, photos]);
 
   if (!photos.length) {
     return <Typography sx={{ p: 2 }}>Loading...</Typography>;
