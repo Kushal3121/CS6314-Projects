@@ -8,11 +8,14 @@
 }
 
 .photo-img {
-  width: 80%;
-  max-width: 800px;
+  width: 100%;
+  max-width: 700px;
+  height: 400px;
+  object-fit: cover;
   display: block;
   border-radius: 6px;
   margin: 0 auto 10px auto;
+  background-color: #000;
 }
 
 .upload-time {

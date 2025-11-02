@@ -1,54 +1,65 @@
-import React, { useEffect, useState } from 'react';
-import { AppBar, Toolbar, Typography } from '@mui/material';
+import React, { useEffect, useState, useContext } from 'react';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Switch,
+  FormControlLabel,
+} from '@mui/material';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import './styles.css';
+import { AdvancedFeaturesContext } from '../../photoShare.jsx';
 
 /**
  * TopBar:
  * - Shows developer name (left)
- * - Shows context for current view (right)
- *   -> User Name OR "Photos of ..." OR "User List"
+ * - Shows context for current view (center/right)
+ * - Adds a toggle for enabling Advanced Features
  */
 export default function TopBar() {
   const location = useLocation();
   const [rightText, setRightText] = useState('');
 
+  // Access global advanced feature state
+  const { advancedEnabled, setAdvancedEnabled } = useContext(
+    AdvancedFeaturesContext
+  );
+
   useEffect(() => {
-    /**
-     * Derive the correct right-hand text based on current route.
-     * Uses axios to fetch the user name when needed.
-     */
     async function updateRightText() {
       const path = location.pathname;
 
-      // When viewing a specific User Detail
       if (path.startsWith('/users/')) {
         const userId = path.split('/')[2];
-        const { data } = await axios.get(`/user/${userId}`);
-        setRightText(`${data.first_name} ${data.last_name}`);
-      }
-
-      // When viewing a specific User's Photos
-      else if (path.startsWith('/photos/')) {
+        try {
+          const { data } = await axios.get(`/user/${userId}`);
+          setRightText(`${data.first_name} ${data.last_name}`);
+        } catch {
+          setRightText('');
+        }
+      } else if (path.startsWith('/photos/')) {
         const userId = path.split('/')[2];
-        const { data } = await axios.get(`/user/${userId}`);
-        setRightText(`Photos of ${data.first_name} ${data.last_name}`);
-      }
-
-      // When viewing user list
-      else if (path === '/users') {
+        try {
+          const { data } = await axios.get(`/user/${userId}`);
+          setRightText(`Photos of ${data.first_name} ${data.last_name}`);
+        } catch {
+          setRightText('');
+        }
+      } else if (path === '/users') {
         setRightText('User List');
-      }
-
-      // Default fallback for home or unknown route
-      else {
+      } else {
         setRightText('');
       }
     }
 
     updateRightText();
   }, [location]);
+
+  // Toggle handler
+  const handleToggle = (event) => {
+    setAdvancedEnabled(event.target.checked);
+  };
 
   return (
     <AppBar
@@ -57,13 +68,34 @@ export default function TopBar() {
       color='primary'
       className='topbar-appBar'
     >
-      <Toolbar className='topbar-toolbar'>
+      <Toolbar
+        className='topbar-toolbar'
+        sx={{ justifyContent: 'space-between', gap: 2 }}
+      >
+        {/* Left side — your name */}
         <Typography variant='h6' className='topbar-left'>
           Kushal Choudhary
         </Typography>
+
+        {/* Center/right — dynamic route text */}
         <Typography variant='h6' className='topbar-right'>
           {rightText}
         </Typography>
+
+        {/* Rightmost — Advanced Features toggle */}
+        <FormControlLabel
+          control={
+            <Switch
+              checked={advancedEnabled}
+              onChange={handleToggle}
+              color='secondary'
+              inputProps={{ 'aria-label': 'Enable advanced features' }}
+            />
+          }
+          label='Advanced'
+          labelPlacement='start'
+          sx={{ color: 'white' }}
+        />
       </Toolbar>
     </AppBar>
   );
