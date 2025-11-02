@@ -1,0 +1,48 @@
+.photos-container {
+  padding: 16px;
+}
+
+.photo-card {
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.photo-img {
+  width: 80%;
+  max-width: 800px;
+  display: block;
+  border-radius: 6px;
+  margin: 0 auto 10px auto;
+}
+
+.upload-time {
+  display: block;
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+
+/* COMMENT BUBBLE STYLE */
+.comment-bubble {
+  background: #f7f7f7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.comment-header {
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.comment-user {
+  color: #1976d2;
+  text-decoration: none;
+}
+
+.comment-user:hover {
+  text-decoration: underline;
+}
+
+.comment-text {
+  margin-left: 4px;
+}

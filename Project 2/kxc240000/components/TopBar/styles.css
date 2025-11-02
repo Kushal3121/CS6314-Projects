@@ -1,0 +1,26 @@
+.topbar-appBar {
+  padding: 8px 16px;
+}
+
+.topbar-toolbar {
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+}
+
+/* Left side (name) */
+.topbar-left {
+  font-weight: 600;
+  flex: 1;
+  letter-spacing: 0.5px;
+}
+
+/* Right side (context) */
+.topbar-right {
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.topbar-appBar {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
