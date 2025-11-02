@@ -126,6 +126,10 @@ app.get('/user/counts', async (req, res) => {
 app.get('/user/:id', async (req, res) => {
   const { id } = req.params;
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid user id' });
+    }
     const user =
       (await User.findById(
         id,
@@ -148,6 +152,10 @@ app.get('/user/:id', async (req, res) => {
 app.get('/photosOfUser/:id', async (req, res) => {
   const { id } = req.params;
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid user id' });
+    }
     const photos = await Photo.find({
       $or: [{ user_id: id }, { user_id: new mongoose.Types.ObjectId(id) }],
     })
