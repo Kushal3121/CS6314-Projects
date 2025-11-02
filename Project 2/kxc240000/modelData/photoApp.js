@@ -39,17 +39,17 @@
  * models.schemaModel() - A function that returns the test info from the
  * fake schema. The function returns an object containing:
  *   load_date_time (date)  - The date the schema was made in String format.
- *   loaded_from (string)   - The file the schema was loaded from. (mockSetup.js or webServer.js)
+ *   loaded_from (string)   - The file the schema was loaded from. (webServer.js or mongoDb.js)
  */
 
 const schemaInfo = {
   load_date_time: `${new Date().toDateString()} ${new Date().toTimeString()}`,
-  loaded_from: 'mockSetup.js',
+  loaded_from: 'webServer.js',
 };
 
 const schemaInfo2 = {
   load_date_time: `${new Date().toDateString()} ${new Date().toTimeString()}`,
-  loaded_from: 'webServer.js',
+  loaded_from: 'mongoDb.js',
 };
 
 const im = {
@@ -177,7 +177,7 @@ const photo9 = {
 
 const photo10 = {
   _id: '57231f1a30e4351f4e9f4be6',
-  date_time: '2013- need12-03 09:03:00',
+  date_time: '2013-12-03 09:03:00',
   file_name: 'took2.jpg',
   user_id: pt._id,
 };

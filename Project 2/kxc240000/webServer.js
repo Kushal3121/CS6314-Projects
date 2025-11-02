@@ -1,82 +1,122 @@
 /**
- * Simple Express server for Project 1
+ * Project 2 Express server connected to MongoDB 'project2'.
+ * Start with: node webServer.js
+ * Client uses axios to call these endpoints.
  */
-import express from 'express';
+
+// eslint-disable-next-line import/no-extraneous-dependencies
+import mongoose from "mongoose";
+// eslint-disable-next-line import/no-extraneous-dependencies
+import bluebird from "bluebird";
+import express from "express";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import models from './modelData/photoApp.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// ToDO - Your submission should work without this line. Comment out or delete this line for tests and before submission!
+import models from "./modelData/photoApp.js";
 
-const portno = 3001;
+// Load the Mongoose schema for User, Photo, and SchemaInfo
+// ToDO - Your submission will use code below, so make sure to uncomment this line for tests and before submission!
+// import User from "./schema/user.js";
+// import Photo from "./schema/photo.js";
+// import SchemaInfo from "./schema/schemaInfo.js";
+
+const portno = 3001; // Port number to use
 const app = express();
 
 // Enable CORS for all routes
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header(
-    'Access-Control-Allow-Headers',
-    'Origin, X-Requested-With, Content-Type, Accept, Authorization'
-  );
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    res.sendStatus(200);
+  } else {
+    next();
   }
-  return next();
 });
 
-// Serve static files
+mongoose.Promise = bluebird;
+mongoose.set("strictQuery", false);
+mongoose.connect("mongodb://127.0.0.1/project2", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// We have the express static module
+// (http://expressjs.com/en/starter/static-files.html) do all the work for us.
 app.use(express.static(__dirname));
 
-app.get('/', (req, res) => {
-  return res.send(`Simple web server of files from ${__dirname}`);
+app.get("/", function (request, response) {
+  response.send("Simple web server of files from " + __dirname);
 });
 
 /**
- * /test/info
+ * /test/info - Returns the SchemaInfo object of the database in JSON format.
+ *              This is good for testing connectivity with MongoDB.
  */
-app.get('/test/info', (req, res) => {
-  const info = models.schemaInfo2();
-  return res.status(200).send(info);
+
+app.get('/test/info', (request, response) => {
+  const info = models.schemaInfo();
+  response.status(200).send(info);
 });
 
 /**
- * /user/list
+ * /test/counts - Returns an object with the counts of the different collections
+ *                in JSON format.
  */
-app.get('/user/list', (req, res) => {
-  return res.status(200).send(models.userListModel());
+app.get('/test/counts', (request, response) => {
+  const users = models.userListModel();
+  let photoCount = 0;
+  users.forEach((user) => {
+    photoCount += models.photoOfUserModel(user._id).length;
+  });
+  response.status(200).send({
+    user: users.length,
+    photo: photoCount,
+    schemaInfo: 1
+  });
 });
 
 /**
- * /user/:id
+ * URL /user/list - Returns all the User objects.
  */
-app.get('/user/:id', (req, res) => {
-  const userId = req.params.id;
-  const user = models.userModel(userId);
+app.get('/user/list', (request, response) => {
+  response.status(200).send(models.userListModel());
+});
 
+/**
+ * URL /user/:id - Returns the information for User (id).
+ */
+app.get('/user/:id', (request, response) => {
+  const user = models.userModel(request.params.id);
   if (!user) {
-    console.error(`User not found: ${userId}`);
-    return res.status(404).send({ message: 'User not found' });
+    response.status(400).send("Not found");
+    return;
   }
-  return res.status(200).send(user);
+  response.status(200).send(user);
 });
 
 /**
- * /photosOfUser/:id
+ * URL /photosOfUser/:id - Returns the Photos for User (id).
  */
-app.get('/photosOfUser/:id', (req, res) => {
-  const userId = req.params.id;
-  const photos = models.photoOfUserModel(userId);
-
+app.get('/photosOfUser/:id', (request, response) => {
+  const photos = models.photoOfUserModel(request.params.id);
   if (!photos || photos.length === 0) {
-    console.error(`No photos for user: ${userId}`);
-    return res.status(404).send({ message: 'No photos for this user' });
+    return response.status(404).send({ error: 'Photos not found' });
   }
-  return res.status(200).send(photos);
+  return response.status(200).send(photos);
 });
 
-const server = app.listen(portno, () => {
-  const { port } = server.address();
-  console.log(`Listening at http://localhost:${port} exporting ${__dirname}`);
+const server = app.listen(portno, function () {
+  const port = server.address().port;
+  console.log(
+    "Listening at http://localhost:" +
+      port +
+      " exporting the directory " +
+      __dirname
+  );
 });
