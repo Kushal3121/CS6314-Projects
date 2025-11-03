@@ -1,26 +1,50 @@
+/* ========== TOPBAR STYLES ========== */
 .topbar-appBar {
-  padding: 8px 16px;
+  background: rgba(25, 118, 210, 0.85); /* primary with transparency */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease-in-out;
+  padding: 0 16px;
 }
 
 .topbar-toolbar {
   display: flex;
   align-items: center;
-  min-height: 64px;
+  justify-content: space-between;
+  min-height: 70px;
+  gap: 1rem;
 }
 
-/* Left side (name) */
+/* Left side */
 .topbar-left {
-  font-weight: 600;
-  flex: 1;
+  font-weight: 700;
   letter-spacing: 0.5px;
+  font-size: 1.1rem;
+  flex: 1;
 }
 
-/* Right side (context) */
-.topbar-right {
-  opacity: 0.9;
+/* Center title */
+.topbar-center {
+  flex: 2;
+  text-align: center;
   font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.topbar-appBar {
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+/* Right side (Advanced toggle) */
+.topbar-toggle {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* Smooth hover feel */
+.topbar-appBar:hover {
+  background: rgba(25, 118, 210, 0.95);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
 }
