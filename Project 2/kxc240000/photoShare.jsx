@@ -1,4 +1,4 @@
-import React, { useState, createContext } from 'react';
+import React, { useState, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
 import { Grid, Paper } from '@mui/material';
 import { BrowserRouter, Route, Routes, useParams } from 'react-router-dom';
@@ -9,12 +9,12 @@ import UserDetail from './components/UserDetail';
 import UserList from './components/UserList';
 import UserPhotos from './components/UserPhotos';
 import UserComments from './components/UserComments';
+import AdvancedFeaturesContext from './context/AdvancedFeaturesContext.js';
 
 // Set base URL for backend
 axios.defaults.baseURL = 'http://localhost:3001';
 
-// Context to store Advanced Features toggle state
-export const AdvancedFeaturesContext = createContext();
+// Context provided from separate module to avoid import cycles
 
 function UserDetailRoute() {
   const { userId } = useParams();
@@ -38,7 +38,10 @@ function PhotoShare() {
 
   return (
     <AdvancedFeaturesContext.Provider
-      value={{ advancedEnabled, setAdvancedEnabled }}
+      value={useMemo(
+        () => ({ advancedEnabled, setAdvancedEnabled }),
+        [advancedEnabled]
+      )}
     >
       <BrowserRouter>
         <div>

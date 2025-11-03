@@ -10,7 +10,7 @@ import {
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import './styles.css';
-import { AdvancedFeaturesContext } from '../../photoShare.jsx';
+import AdvancedFeaturesContext from '../../context/AdvancedFeaturesContext.js';
 
 /**
  * TopBar
@@ -75,7 +75,7 @@ export default function TopBar() {
         {/* Right - Advanced toggle */}
         <Box className='topbar-toggle'>
           <FormControlLabel
-            control={
+            control={(
               <Switch
                 checked={advancedEnabled}
                 onChange={handleToggle}
@@ -90,7 +90,7 @@ export default function TopBar() {
                 }}
                 inputProps={{ 'aria-label': 'Enable advanced features' }}
               />
-            }
+            )}
             label='Advanced'
             labelPlacement='start'
             sx={{ color: 'white', fontSize: '0.9rem' }}

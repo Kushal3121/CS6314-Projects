@@ -17,6 +17,10 @@ export default function UserComments() {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
+  const createNavigateToPhoto = (ownerId, photoId) => () => {
+    navigate(`/photos/${ownerId}/${photoId}`);
+  };
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -54,7 +58,7 @@ export default function UserComments() {
           >
             <Box
               sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-              onClick={() => navigate(`/photos/${c.owner_id}/${c.photo_id}`)}
+              onClick={createNavigateToPhoto(c.owner_id, c.photo_id)}
             >
               <CardMedia
                 component='img'
@@ -72,9 +76,7 @@ export default function UserComments() {
                 <Typography
                   variant='body2'
                   sx={{ fontWeight: 500 }}
-                  onClick={() =>
-                    navigate(`/photos/${c.owner_id}/${c.photo_id}`)
-                  }
+                  onClick={createNavigateToPhoto(c.owner_id, c.photo_id)}
                 >
                   {c.comment}
                 </Typography>

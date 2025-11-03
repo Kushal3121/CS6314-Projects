@@ -11,7 +11,7 @@ import {
   Divider,
 } from '@mui/material';
 import './styles.css';
-import { AdvancedFeaturesContext } from '../../photoShare.jsx';
+import AdvancedFeaturesContext from '../../context/AdvancedFeaturesContext.js';
 
 export default function UserPhotos() {
   const { userId, photoId } = useParams();
@@ -39,16 +39,20 @@ export default function UserPhotos() {
 
   // Handle photo navigation
   useEffect(() => {
-    if (!photos.length) return;
-    if (!photoId) return setCurrentIndex(0);
-
-    const maybeIndex = Number(photoId);
-    if (Number.isFinite(maybeIndex)) {
-      const bounded = Math.max(0, Math.min(photos.length - 1, maybeIndex));
-      setCurrentIndex(bounded);
+    if (!photos.length) {
+      return;
+    }
+    if (!photoId) {
+      setCurrentIndex(0);
     } else {
-      const byIdIndex = photos.findIndex((p) => p._id === photoId);
-      setCurrentIndex(byIdIndex >= 0 ? byIdIndex : 0);
+      const maybeIndex = Number(photoId);
+      if (Number.isFinite(maybeIndex)) {
+        const bounded = Math.max(0, Math.min(photos.length - 1, maybeIndex));
+        setCurrentIndex(bounded);
+      } else {
+        const byIdIndex = photos.findIndex((p) => p._id === photoId);
+        setCurrentIndex(byIdIndex >= 0 ? byIdIndex : 0);
+      }
     }
   }, [photoId, photos]);
 

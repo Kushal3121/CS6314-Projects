@@ -13,7 +13,7 @@ import {
   Avatar,
 } from '@mui/material';
 import './styles.css';
-import { AdvancedFeaturesContext } from '../../photoShare.jsx';
+import AdvancedFeaturesContext from '../../context/AdvancedFeaturesContext.js';
 
 /**
  * UserList
@@ -44,17 +44,18 @@ export default function UserList() {
   }, []);
 
   useEffect(() => {
-    if (!advancedEnabled) return;
     let mounted = true;
-    async function loadCounts() {
+    const loadCounts = async () => {
       try {
         const { data } = await axios.get('/user/counts');
         if (mounted) setCounts(data);
       } catch (err) {
         console.error('Failed to load counts:', err);
       }
+    };
+    if (advancedEnabled) {
+      loadCounts();
     }
-    loadCounts();
     return () => {
       mounted = false;
     };

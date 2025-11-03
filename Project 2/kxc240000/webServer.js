@@ -141,10 +141,10 @@ app.get('/user/:id', async (req, res) => {
       ).lean());
 
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.status(200).json(user);
+    return res.status(200).json(user);
   } catch (err) {
     console.error('Error in /user/:id:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -166,9 +166,9 @@ app.get('/photosOfUser/:id', async (req, res) => {
       return res.status(404).json({ message: 'No photos found for this user' });
     }
 
-    // Populate commenter info
-    for (const photo of photos) {
-      for (const comment of photo.comments || []) {
+    // Populate commenter info without awaiting inside a tight loop
+    const populationPromises = photos.map(async (photo) => {
+      const commentPromises = (photo.comments || []).map(async (comment) => {
         const commenterId = comment.user_id?.toString?.() || comment.user_id;
         const user = await User.findOne(
           { _id: commenterId },
@@ -176,13 +176,15 @@ app.get('/photosOfUser/:id', async (req, res) => {
         ).lean();
         comment.user = user || null;
         delete comment.user_id;
-      }
-    }
+      });
+      await Promise.all(commentPromises);
+    });
+    await Promise.all(populationPromises);
 
-    res.status(200).json(photos);
+    return res.status(200).json(photos);
   } catch (err) {
     console.error('Error in /photosOfUser/:id:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -211,10 +213,10 @@ app.get('/commentsOfUser/:id', async (req, res) => {
       }
     }
 
-    res.status(200).json(result);
+    return res.status(200).json(result);
   } catch (err) {
     console.error('Error in /commentsOfUser/:id', err);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Internal server error' });
   }
 });
 
