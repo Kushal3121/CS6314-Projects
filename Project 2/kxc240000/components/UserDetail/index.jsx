@@ -1,20 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Paper, Typography, Stack, Button } from '@mui/material';
+import {
+  Paper,
+  Typography,
+  Stack,
+  Button,
+  Avatar,
+  Divider,
+  Box,
+} from '@mui/material';
 import './styles.css';
 
+/**
+ * UserDetail
+ * Shows profile info in a horizontal card (avatar left, details right).
+ */
 export default function UserDetail() {
-  // Extract userId directly from the current URL
   const { userId } = useParams();
-
-  // Local state where fetched user data will be stored
   const [user, setUser] = useState(null);
 
-  /**
-   * Fetch user details on mount OR when userId in URL changes.
-   * Using cleanup to prevent state update after unmount.
-   */
   useEffect(() => {
     let mounted = true;
 
@@ -28,41 +33,54 @@ export default function UserDetail() {
     }
 
     loadUser();
-
     return () => {
       mounted = false;
     };
   }, [userId]);
 
-  // Loading UI while fetching user data
   if (!user) {
     return <Typography className='detail-loading'>Loading...</Typography>;
   }
 
+  const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`;
+
   return (
-    <Paper elevation={0} className='user-detail-card'>
-      {/* User full name */}
-      <Typography variant='h6' className='user-detail-name'>
-        {user.first_name} {user.last_name}
-      </Typography>
+    <Paper elevation={0} className='user-detail-wide'>
+      {/* Left — Avatar */}
+      <Box className='user-detail-avatar-section'>
+        <Avatar className='user-detail-avatar-large'>{initials}</Avatar>
+      </Box>
 
-      {/* Meta details of user */}
-      <Stack spacing={0.5} className='user-detail-meta'>
-        <Typography variant='body2'>📍 {user.location}</Typography>
-        <Typography variant='body2'>💼 {user.occupation}</Typography>
-        <Typography variant='body2'>📝 {user.description}</Typography>
-      </Stack>
+      {/* Right — Info */}
+      <Box className='user-detail-info'>
+        <Typography variant='h5' className='user-detail-name'>
+          {user.first_name} {user.last_name}
+        </Typography>
 
-      {/* Button to navigate to user's photos */}
-      <Button
-        variant='contained'
-        size='small'
-        component={Link}
-        to={`/photos/${user._id}`}
-        className='view-photos-btn'
-      >
-        View Photos
-      </Button>
+        <Divider className='user-detail-divider' />
+
+        <Stack spacing={0.8} className='user-detail-meta'>
+          <Typography variant='body1' className='meta-line'>
+            📍 <span>{user.location || 'Unknown location'}</span>
+          </Typography>
+          <Typography variant='body1' className='meta-line'>
+            💼 <span>{user.occupation || 'No occupation listed'}</span>
+          </Typography>
+          <Typography variant='body1' className='meta-line'>
+            📝 <span>{user.description || 'No description available'}</span>
+          </Typography>
+        </Stack>
+
+        <Button
+          variant='contained'
+          size='medium'
+          component={Link}
+          to={`/photos/${user._id}`}
+          className='view-photos-btn-wide'
+        >
+          View Photos
+        </Button>
+      </Box>
     </Paper>
   );
 }
