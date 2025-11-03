@@ -10,21 +10,23 @@ import {
   Divider,
   Stack,
   Chip,
+  Avatar,
 } from '@mui/material';
 import './styles.css';
 import { AdvancedFeaturesContext } from '../../photoShare.jsx';
 
+/**
+ * UserList
+ * Sidebar that displays all users.
+ * When Advanced Mode is ON, shows photo/comment counts.
+ */
 export default function UserList() {
-  // Local state for user list and counts
   const [users, setUsers] = useState([]);
   const [counts, setCounts] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
-
-  // Access the global advanced mode from context
   const { advancedEnabled } = useContext(AdvancedFeaturesContext);
 
-  // Load all users initially
   useEffect(() => {
     let mounted = true;
     async function loadUsers() {
@@ -41,7 +43,6 @@ export default function UserList() {
     };
   }, []);
 
-  // Load user photo/comment counts when Advanced Mode is ON
   useEffect(() => {
     if (!advancedEnabled) return;
     let mounted = true;
@@ -59,7 +60,6 @@ export default function UserList() {
     };
   }, [advancedEnabled]);
 
-  // Helper to find count for given user
   const getCount = (id, type) => {
     const entry = counts.find((c) => c._id === id);
     if (!entry) return 0;
@@ -68,67 +68,74 @@ export default function UserList() {
 
   return (
     <Paper elevation={0} className='userlist-card'>
-      {/* Sidebar Header */}
       <Typography variant='subtitle2' className='userlist-title'>
-        Users
+        USERS
       </Typography>
 
       <Divider className='userlist-divider' />
 
-      {/* Sidebar List */}
       <List dense className='userlist-list'>
         {users.map((u) => {
-          // Only highlight if the user route or photo route is active
           const isSelected =
             location.pathname.startsWith(`/users/${u._id}`) ||
-            location.pathname.startsWith(`/photos/${u._id}`);
+            location.pathname.startsWith(`/photos/${u._id}`) ||
+            location.pathname === `/comments/${u._id}`;
 
-          // Optional: faint highlight for comments page
-          const isOnComments = location.pathname === `/comments/${u._id}`;
+          const initials = `${u.first_name?.[0] || ''}${
+            u.last_name?.[0] || ''
+          }`;
 
           return (
             <ListItemButton
               key={u._id}
               component={Link}
               to={`/users/${u._id}`}
-              selected={isSelected || isOnComments}
-              className='userlist-item'
+              selected={isSelected}
+              className={`userlist-item ${
+                isSelected ? 'userlist-selected' : ''
+              }`}
             >
-              <ListItemText primary={`${u.first_name} ${u.last_name}`} />
+              {/* Avatar */}
+              <Avatar
+                sx={{
+                  width: 32,
+                  height: 32,
+                  fontSize: 14,
+                  bgcolor: isSelected ? '#1976d2' : '#90caf9',
+                  color: isSelected ? '#fff' : '#0d47a1',
+                  mr: 1.5,
+                  fontWeight: 600,
+                }}
+              >
+                {initials}
+              </Avatar>
 
-              {/* Only show bubbles if Advanced Mode is enabled */}
+              {/* Name */}
+              <ListItemText
+                primary={`${u.first_name} ${u.last_name}`}
+                primaryTypographyProps={{
+                  fontSize: 14,
+                  fontWeight: isSelected ? 600 : 500,
+                  color: isSelected ? '#1976d2' : '#333',
+                }}
+              />
+
+              {/* Count bubbles (if advanced mode enabled) */}
               {advancedEnabled && (
-                <Stack direction='row' spacing={1}>
-                  {/* Green bubble — photo count */}
+                <Stack direction='row' spacing={0.5}>
                   <Chip
                     size='small'
                     label={getCount(u._id, 'photos')}
-                    sx={{
-                      backgroundColor: '#4caf50',
-                      color: 'white',
-                      fontWeight: 600,
-                      height: 22,
-                    }}
+                    className='chip-photo'
                   />
-
-                  {/* Red bubble — comment count */}
                   <Chip
                     size='small'
                     label={getCount(u._id, 'comments')}
+                    className='chip-comment'
                     onClick={(e) => {
                       e.preventDefault();
-                      e.stopPropagation(); // prevent parent link click
-                      navigate(`/comments/${u._id}`); // go to comments page
-                    }}
-                    sx={{
-                      backgroundColor: '#f44336',
-                      color: 'white',
-                      fontWeight: 600,
-                      height: 22,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        backgroundColor: '#d32f2f',
-                      },
+                      e.stopPropagation();
+                      navigate(`/comments/${u._id}`);
                     }}
                   />
                 </Stack>
