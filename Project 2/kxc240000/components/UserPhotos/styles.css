@@ -1,40 +1,144 @@
-.photos-container {
-  padding: 16px;
+/* ===== NORMAL GALLERY ===== */
+.gallery-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
 }
 
-.photo-card {
-  padding: 16px;
-  margin-bottom: 20px;
+.photo-card-modern {
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.photo-img {
+.photo-card-modern:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 18px rgba(25, 118, 210, 0.15);
+}
+
+.photo-img-modern {
   width: 100%;
-  max-width: 700px;
-  height: 400px;
+  max-width: 400px;
+  border-radius: 12px;
   object-fit: cover;
+  transition: transform 0.3s ease;
+  max-height: 600px;
   display: block;
-  border-radius: 6px;
-  margin: 0 auto 10px auto;
-  background-color: #000;
+  margin: 0 auto;
+}
+
+.photo-img-modern.portrait {
+  object-fit: contain !important;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  max-height: 600px;
+  background: #fff;
+}
+
+.photo-img-modern:hover {
+  transform: scale(1.03);
 }
 
 .upload-time {
   display: block;
-  margin-bottom: 12px;
-  opacity: 0.7;
+  margin-top: 8px;
+  color: #666;
+  font-size: 0.8rem;
+  text-align: center;
 }
 
-/* COMMENT BUBBLE STYLE */
+/* ===== COMMENTS ===== */
+.comment-modern {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-top: 10px;
+}
+
+.comment-header {
+  font-weight: 500;
+  color: #333;
+}
+
+.comment-user {
+  color: #1976d2;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.comment-user:hover {
+  text-decoration: underline;
+}
+
+.comment-text {
+  color: #444;
+  margin-top: 3px;
+}
+
+/* ====== ADVANCED MODE SPLIT VIEW ====== */
+.viewer-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.viewer-split-card {
+  display: flex;
+  flex-direction: row;
+  width: 90%;
+  max-width: 1000px;
+  height: 600px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1);
+}
+
+/* Left photo area */
+.viewer-photo-box {
+  flex: 2;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.viewer-photo-fixed {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  background: #ffffff;
+}
+
+/* Right comments area */
+.viewer-comments-box {
+  flex: 1;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.comments-scroll-area {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 8px;
+}
+
+/* Comment bubble */
 .comment-bubble {
-  background: #f7f7f7;
-  border-radius: 8px;
+  background: #f1f3f5;
+  border-radius: 10px;
   padding: 10px 12px;
   margin-bottom: 10px;
 }
 
-.comment-header {
-  margin-bottom: 4px;
-  font-weight: 500;
+.comment-bubble:hover {
+  background: #e9eef2;
 }
 
 .comment-user {
@@ -46,6 +150,29 @@
   text-decoration: underline;
 }
 
-.comment-text {
-  margin-left: 4px;
+/* Responsive fallback */
+@media (max-width: 768px) {
+  .viewer-split-card {
+    flex-direction: column;
+    height: auto;
+  }
+  .viewer-photo-box {
+    height: 400px;
+  }
+}
+
+/* ====== Navigation Footer Styling ====== */
+.viewer-nav-footer {
+  padding: 14px 0;
+  text-align: center;
+  position: relative;
+}
+
+.viewer-nav-footer button {
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+.viewer-nav-footer button:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }

@@ -1,4 +1,3 @@
-/* ===== Wide Profile Card ===== */
 .user-detail-wide {
   display: flex;
   align-items: center;
@@ -15,8 +14,6 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   margin: 0 auto;
-  /* width: 90%; */
-  /* max-width: 800px; */
 }
 
 .user-detail-wide:hover {
