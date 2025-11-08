@@ -11,17 +11,32 @@ import {
 } from '@mui/material';
 import './styles.css';
 
+/**
+ * UserComments
+ * Fetches all comments authored by a specific user and renders them alongside
+ * a thumbnail of the photo the comment belongs to. Clicking a comment or its
+ * thumbnail navigates to that exact photo within the user's photo gallery.
+ */
 export default function UserComments() {
+  // Router param for the user whose comments we are displaying
   const { userId } = useParams();
+  // Local view state
   const [comments, setComments] = useState([]);
   const [user, setUser] = useState(null);
+  // Imperative navigation helper
   const navigate = useNavigate();
 
+  /**
+   * Returns an onClick handler that navigates to the owner's photo page
+   * focused on the selected photo.
+   */
   const createNavigateToPhoto = (ownerId, photoId) => () => {
     navigate(`/photos/${ownerId}/${photoId}`);
   };
 
   useEffect(() => {
+    // Fetch user comments and the user's basic profile in parallel.
+    // Re-runs when the router param `userId` changes.
     async function loadData() {
       try {
         const [{ data: commentsData }, { data: userData }] = await Promise.all([
@@ -37,6 +52,7 @@ export default function UserComments() {
     loadData();
   }, [userId]);
 
+  // Keep the UI responsive while data is loading.
   if (!user) return <Typography sx={{ p: 2 }}>Loading...</Typography>;
 
   return (
@@ -52,6 +68,7 @@ export default function UserComments() {
       ) : (
         comments.map((c) => (
           <Card
+            // Composite key avoids collisions for multiple comments on same photo.
             key={c.photo_id + c.date_time}
             className='usercomment-card'
             elevation={1}
@@ -81,6 +98,7 @@ export default function UserComments() {
                   {c.comment}
                 </Typography>
                 <Typography variant='caption' sx={{ opacity: 0.7 }}>
+                  {/* Human-friendly timestamp */}
                   {new Date(c.date_time).toLocaleString()}
                 </Typography>
               </CardContent>
