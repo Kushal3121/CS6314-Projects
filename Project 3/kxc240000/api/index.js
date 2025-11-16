@@ -42,8 +42,11 @@ export const postComment = async ({ photoId, comment }) => {
   return data;
 };
 
-export const loginRequest = async ({ login_name }) => {
-  const { data } = await apiClient.post('/admin/login', { login_name });
+export const loginRequest = async ({ login_name, password }) => {
+  const { data } = await apiClient.post('/admin/login', {
+    login_name,
+    password,
+  });
   return data;
 };
 
@@ -56,5 +59,10 @@ export const uploadPhoto = async (file) => {
   const form = new FormData();
   form.append('photo', file);
   const { data } = await apiClient.post('/photos/new', form);
+  return data;
+};
+
+export const registerRequest = async (payload) => {
+  const { data } = await apiClient.post('/user', payload);
   return data;
 };

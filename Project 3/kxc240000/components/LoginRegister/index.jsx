@@ -12,19 +12,32 @@ import {
 } from '@mui/material';
 import LoginIcon from '@mui/icons-material/Login';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import { loginRequest, queryKeys } from '../../api/index.js';
+import { loginRequest, registerRequest, queryKeys } from '../../api/index.js';
 import useAppStore from '../../store/useAppStore.js';
 import './styles.css'; // <— add this
 
 export default function LoginRegister() {
   const [loginName, setLoginName] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [error, setError] = useState('');
+  const [registerState, setRegisterState] = useState({
+    login_name: '',
+    password: '',
+    password2: '',
+    first_name: '',
+    last_name: '',
+    location: '',
+    occupation: '',
+    description: '',
+  });
+  const [registerMsg, setRegisterMsg] = useState('');
   const setCurrentUser = useAppStore((s) => s.setCurrentUser);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const loginMutation = useMutation({
-    mutationFn: ({ login_name }) => loginRequest({ login_name }),
+    mutationFn: ({ login_name, password }) =>
+      loginRequest({ login_name, password }),
     onSuccess: (user) => {
       setCurrentUser(user);
       queryClient.invalidateQueries({ queryKey: queryKeys.users });
@@ -33,19 +46,43 @@ export default function LoginRegister() {
     },
     onError: (e) => {
       const msg =
-        e?.response?.data?.message || 'Invalid login name. Please try again.';
+        e?.response?.data?.message || 'Invalid credentials. Please try again.';
       setError(msg);
+    },
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: (payload) => registerRequest(payload),
+    onSuccess: () => {
+      setRegisterMsg('Success: Account created. You can now log in.');
+      setRegisterState({
+        login_name: '',
+        password: '',
+        password2: '',
+        first_name: '',
+        last_name: '',
+        location: '',
+        occupation: '',
+        description: '',
+      });
+    },
+    onError: (e) => {
+      const msg = e?.response?.data?.message || 'Registration failed.';
+      setRegisterMsg(msg);
     },
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
-    if (!loginName.trim()) {
-      setError('Please enter your login name.');
+    if (!loginName.trim() || !loginPassword.trim()) {
+      setError('Please enter login name and password.');
       return;
     }
-    loginMutation.mutate({ login_name: loginName.trim() });
+    loginMutation.mutate({
+      login_name: loginName.trim(),
+      password: loginPassword.trim(),
+    });
   };
 
   return (
@@ -98,6 +135,15 @@ export default function LoginRegister() {
                 placeholder='e.g. ripley'
                 InputProps={{ sx: { borderRadius: 2 } }}
               />
+              <TextField
+                label='Password'
+                type='password'
+                variant='outlined'
+                fullWidth
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
 
               {error && (
                 <Typography
@@ -143,6 +189,167 @@ export default function LoginRegister() {
               >
                 Try: malcolm, ripley, took, kenobi, ludgate, ousterhout
               </Typography>
+            </Stack>
+          </form>
+
+          <Divider sx={{ width: '100%', my: 2 }} />
+
+          {/* Registration */}
+          <Typography variant='h6' fontWeight={700}>
+            Create Account
+          </Typography>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setRegisterMsg('');
+              const {
+                login_name,
+                password,
+                password2,
+                first_name,
+                last_name,
+                location,
+                occupation,
+                description,
+              } = registerState;
+              if (
+                !login_name.trim() ||
+                !first_name.trim() ||
+                !last_name.trim() ||
+                !password.trim()
+              ) {
+                setRegisterMsg('Please fill required fields.');
+                return;
+              }
+              if (password !== password2) {
+                setRegisterMsg('Passwords do not match.');
+                return;
+              }
+              registerMutation.mutate({
+                login_name: login_name.trim(),
+                password: password.trim(),
+                first_name: first_name.trim(),
+                last_name: last_name.trim(),
+                location,
+                occupation,
+                description,
+              });
+            }}
+            style={{ width: '100%' }}
+          >
+            <Stack spacing={1.25}>
+              <TextField
+                label='Login Name'
+                value={registerState.login_name}
+                onChange={(e) =>
+                  setRegisterState((s) => ({
+                    ...s,
+                    login_name: e.target.value,
+                  }))
+                }
+                fullWidth
+              />
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+                <TextField
+                  label='First Name'
+                  value={registerState.first_name}
+                  onChange={(e) =>
+                    setRegisterState((s) => ({
+                      ...s,
+                      first_name: e.target.value,
+                    }))
+                  }
+                  fullWidth
+                />
+                <TextField
+                  label='Last Name'
+                  value={registerState.last_name}
+                  onChange={(e) =>
+                    setRegisterState((s) => ({
+                      ...s,
+                      last_name: e.target.value,
+                    }))
+                  }
+                  fullWidth
+                />
+              </Stack>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+                <TextField
+                  label='Password'
+                  type='password'
+                  value={registerState.password}
+                  onChange={(e) =>
+                    setRegisterState((s) => ({
+                      ...s,
+                      password: e.target.value,
+                    }))
+                  }
+                  fullWidth
+                />
+                <TextField
+                  label='Confirm Password'
+                  type='password'
+                  value={registerState.password2}
+                  onChange={(e) =>
+                    setRegisterState((s) => ({
+                      ...s,
+                      password2: e.target.value,
+                    }))
+                  }
+                  fullWidth
+                />
+              </Stack>
+              <TextField
+                label='Location'
+                value={registerState.location}
+                onChange={(e) =>
+                  setRegisterState((s) => ({ ...s, location: e.target.value }))
+                }
+                fullWidth
+              />
+              <TextField
+                label='Occupation'
+                value={registerState.occupation}
+                onChange={(e) =>
+                  setRegisterState((s) => ({
+                    ...s,
+                    occupation: e.target.value,
+                  }))
+                }
+                fullWidth
+              />
+              <TextField
+                label='Description'
+                value={registerState.description}
+                onChange={(e) =>
+                  setRegisterState((s) => ({
+                    ...s,
+                    description: e.target.value,
+                  }))
+                }
+                fullWidth
+                multiline
+                minRows={2}
+              />
+              {registerMsg && (
+                <Typography
+                  role='alert'
+                  variant='body2'
+                  color={
+                    registerMsg.startsWith('Success') ? 'success.main' : 'error'
+                  }
+                >
+                  {registerMsg}
+                </Typography>
+              )}
+              <Button
+                type='submit'
+                variant='outlined'
+                startIcon={<AccountCircleIcon />}
+                disabled={registerMutation.isPending}
+              >
+                {registerMutation.isPending ? 'Registering...' : 'Register Me'}
+              </Button>
             </Stack>
           </form>
         </Stack>

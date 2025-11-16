@@ -1,10 +1,10 @@
 /* If your AppBar height is different, tweak this once */
 :root {
-  --appbar-h: 64px;
+  /* --appbar-h: 64px; */
 } /* desktop */
 @media (max-width: 600px) {
   :root {
-    --appbar-h: 56px;
+    /* --appbar-h: 56px; */
   }
 } /* mobile */
 

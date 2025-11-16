@@ -94,23 +94,24 @@ app.get('/test/counts', async (req, res) => {
 
 /* ---------- AUTH ROUTES ---------- */
 app.post('/admin/login', async (req, res) => {
-  const { login_name } = req.body || {};
-  if (!login_name) {
-    return res.status(400).json({ message: 'login_name required' });
+  const { login_name, password } = req.body || {};
+  if (!login_name || !password) {
+    return res
+      .status(400)
+      .json({ message: 'login_name and password required' });
   }
   try {
-    const user = await User.findOne(
-      { login_name },
-      '_id first_name last_name login_name'
-    ).lean();
-    if (!user) {
+    const user = await User.findOne({ login_name }).lean();
+    if (!user || user.password !== password) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
     req.session.user = {
       _id: user._id.toString(),
       login_name: user.login_name,
     };
-    return res.status(200).json(user);
+    // return only properties UI needs (avoid password)
+    const { _id, first_name, last_name, login_name: ln } = user;
+    return res.status(200).json({ _id, first_name, last_name, login_name: ln });
   } catch (err) {
     console.error('Error in /admin/login:', err);
     return res.status(500).json({ message: 'Internal server error' });
@@ -133,7 +134,11 @@ app.post('/admin/logout', (req, res) => {
 /* ---------- AUTH GUARD FOR MAIN API ROUTES ---------- */
 // Allow unauthenticated access to test routes and auth endpoints only
 app.use((req, res, next) => {
-  if (req.path.startsWith('/test/') || req.path.startsWith('/admin/')) {
+  if (
+    req.path.startsWith('/test/') ||
+    req.path.startsWith('/admin/') ||
+    (req.method === 'POST' && req.path === '/user')
+  ) {
     return next();
   }
   if (!req.session.user) {
@@ -143,6 +148,48 @@ app.use((req, res, next) => {
 });
 
 /* ---------- MAIN ROUTES ---------- */
+
+// Registration
+app.post('/user', async (req, res) => {
+  try {
+    const {
+      login_name,
+      password,
+      first_name,
+      last_name,
+      location,
+      description,
+      occupation,
+    } = req.body || {};
+    if (!login_name || !password || !first_name || !last_name) {
+      return res.status(400).json({
+        message: 'login_name, password, first_name, last_name required',
+      });
+    }
+    const existing = await User.findOne({ login_name }).lean();
+    if (existing) {
+      return res.status(400).json({ message: 'login_name already exists' });
+    }
+    const created = await User.create({
+      login_name,
+      password,
+      first_name,
+      last_name,
+      location: location || '',
+      description: description || '',
+      occupation: occupation || '',
+    });
+    return res.status(201).json({
+      _id: created._id.toString(),
+      login_name: created.login_name,
+      first_name: created.first_name,
+      last_name: created.last_name,
+    });
+  } catch (err) {
+    console.error('Error in POST /user:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // Upload new photo for current user
 const storage = multer.diskStorage({
