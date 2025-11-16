@@ -159,7 +159,7 @@ export default function LoginRegister() {
                     endAdornment: (
                       <InputAdornment position='end'>
                         <IconButton onClick={() => setShowPassword((p) => !p)}>
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                          {showPassword ? <Visibility /> : <VisibilityOff />}
                         </IconButton>
                       </InputAdornment>
                     ),
@@ -244,7 +244,7 @@ export default function LoginRegister() {
                     endAdornment: (
                       <InputAdornment position='end'>
                         <IconButton onClick={() => setShowPassword((p) => !p)}>
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                          {showPassword ? <Visibility /> : <VisibilityOff />}
                         </IconButton>
                       </InputAdornment>
                     ),
@@ -265,7 +265,7 @@ export default function LoginRegister() {
                     endAdornment: (
                       <InputAdornment position='end'>
                         <IconButton onClick={() => setShowConfirm((p) => !p)}>
-                          {showConfirm ? <VisibilityOff /> : <Visibility />}
+                          {showConfirm ? <Visibility /> : <VisibilityOff />}
                         </IconButton>
                       </InputAdornment>
                     ),
