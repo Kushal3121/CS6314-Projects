@@ -7,6 +7,7 @@
 import mongoose from 'mongoose';
 import bluebird from 'bluebird';
 import express from 'express';
+import session from 'express-session';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -17,20 +18,36 @@ import SchemaInfo from './schema/schemaInfo.js';
 const portno = 3001;
 const app = express();
 
-// Enable CORS for all routes
+// Parse JSON bodies
+app.use(express.json());
+
+// Enable CORS with credentials for Vite dev server
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header(
     'Access-Control-Allow-Headers',
     'Origin, X-Requested-With, Content-Type, Accept, Authorization'
   );
   if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
+    return res.sendStatus(200);
   }
+  return next();
 });
+
+// Session middleware
+app.use(
+  session({
+    secret: 'photoapp-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+    },
+  })
+);
 
 mongoose.Promise = bluebird;
 mongoose.set('strictQuery', false);
@@ -72,6 +89,56 @@ app.get('/test/counts', async (req, res) => {
     console.error('Error in /test/counts:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
+});
+
+/* ---------- AUTH ROUTES ---------- */
+app.post('/admin/login', async (req, res) => {
+  const { login_name } = req.body || {};
+  if (!login_name) {
+    return res.status(400).json({ message: 'login_name required' });
+  }
+  try {
+    const user = await User.findOne(
+      { login_name },
+      '_id first_name last_name login_name'
+    ).lean();
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    req.session.user = {
+      _id: user._id.toString(),
+      login_name: user.login_name,
+    };
+    return res.status(200).json(user);
+  } catch (err) {
+    console.error('Error in /admin/login:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+app.post('/admin/logout', (req, res) => {
+  if (!req.session.user) {
+    return res.status(400).json({ message: 'Not logged in' });
+  }
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Error destroying session:', err);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+    return res.status(200).json({ message: 'Logged out' });
+  });
+});
+
+/* ---------- AUTH GUARD FOR MAIN API ROUTES ---------- */
+// Allow unauthenticated access to test routes and auth endpoints only
+app.use((req, res, next) => {
+  if (req.path.startsWith('/test/') || req.path.startsWith('/admin/')) {
+    return next();
+  }
+  if (!req.session.user) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  return next();
 });
 
 /* ---------- MAIN ROUTES ---------- */

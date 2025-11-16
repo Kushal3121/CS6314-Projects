@@ -34,3 +34,13 @@ export const fetchCommentsOfUser = async (userId) => {
   const { data } = await apiClient.get(`/commentsOfUser/${userId}`);
   return data;
 };
+
+export const loginRequest = async ({ login_name }) => {
+  const { data } = await apiClient.post('/admin/login', { login_name });
+  return data;
+};
+
+export const logoutRequest = async () => {
+  const { data } = await apiClient.post('/admin/logout', {});
+  return data;
+};

@@ -1,0 +1,52 @@
+/* If your AppBar height is different, tweak this once */
+:root {
+  --appbar-h: 64px;
+} /* desktop */
+@media (max-width: 600px) {
+  :root {
+    --appbar-h: 56px;
+  }
+} /* mobile */
+
+/* Safety: no unexpected box-model growth */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Kill page scroll and own the viewport area under the AppBar */
+.loginPage {
+  position: fixed;
+  top: var(--appbar-h); /* sit right under the toolbar */
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  /* center the card perfectly, no scrollbars */
+  display: grid;
+  place-items: center;
+
+  /* prevent any scroll caused by shadows/borders */
+  overflow: hidden;
+
+  /* breathing room on small screens */
+  padding: 24px;
+
+  /* gradient backdrop (you already set this in sx; either place it here or keep in JSX) */
+  background: radial-gradient(
+      1200px 600px at 10% 10%,
+      #e3f2fd 0%,
+      transparent 60%
+    ),
+    radial-gradient(1200px 600px at 90% 10%, #f5f7fa 0%, transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+}
+
+/* optional: ensure html/body/root don't add stray scroll */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}

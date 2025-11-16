@@ -9,6 +9,8 @@ import UserDetail from './components/UserDetail';
 import UserList from './components/UserList';
 import UserPhotos from './components/UserPhotos';
 import UserComments from './components/UserComments';
+import LoginRegister from './components/LoginRegister';
+import useAppStore from './store/useAppStore.js';
 
 // React Query client
 const queryClient = new QueryClient({
@@ -39,6 +41,7 @@ function UserCommentsRoute() {
 }
 
 function PhotoShare() {
+  const currentUser = useAppStore((s) => s.currentUser);
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
@@ -48,26 +51,16 @@ function PhotoShare() {
               <TopBar />
             </Grid>
             <div className='main-topbar-buffer' />
-            <Grid item sm={3}>
+            {currentUser ? (
+              <Grid item sm={3}>
+                <Paper className='main-grid-item'>
+                  <UserList />
+                </Paper>
+              </Grid>
+            ) : null}
+            <Grid item sm={currentUser ? 9 : 12}>
               <Paper className='main-grid-item'>
-                <UserList />
-              </Paper>
-            </Grid>
-            <Grid item sm={9}>
-              <Paper className='main-grid-item'>
-                <Routes>
-                  <Route path='/users/:userId' element={<UserDetailRoute />} />
-                  <Route
-                    path='/comments/:userId'
-                    element={<UserCommentsRoute />}
-                  />
-                  <Route path='/photos/:userId' element={<UserPhotosRoute />} />
-                  <Route
-                    path='/photos/:userId/:photoId'
-                    element={<UserPhotosRoute />}
-                  />
-                  <Route path='/users' element={<UserList />} />
-                </Routes>
+                <MainContentRoutes />
               </Paper>
             </Grid>
           </Grid>
@@ -77,5 +70,22 @@ function PhotoShare() {
   );
 }
 
+function MainContentRoutes() {
+  const currentUser = useAppStore((s) => s.currentUser);
+  if (!currentUser) {
+    return <LoginRegister />;
+  }
+  return (
+    <Routes>
+      <Route path='/users/:userId' element={<UserDetailRoute />} />
+      <Route path='/comments/:userId' element={<UserCommentsRoute />} />
+      {/* photos list + optional specific photo */}
+      <Route path='/photos/:userId' element={<UserPhotosRoute />} />
+      <Route path='/photos/:userId/:photoId' element={<UserPhotosRoute />} />
+      <Route path='/users' element={<UserList />} />
+      <Route path='*' element={<UserList />} />
+    </Routes>
+  );
+}
 const root = ReactDOM.createRoot(document.getElementById('photoshareapp'));
 root.render(<PhotoShare />);

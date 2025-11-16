@@ -25,16 +25,18 @@ export default function UserList() {
   const location = useLocation();
   const navigate = useNavigate();
   const advancedEnabled = useAppStore((s) => s.advancedEnabled);
+  const currentUser = useAppStore((s) => s.currentUser);
 
   const { data: users = [] } = useQuery({
     queryKey: queryKeys.users,
     queryFn: fetchUsers,
+    enabled: Boolean(currentUser),
   });
 
   const { data: counts = [] } = useQuery({
     queryKey: queryKeys.userCounts,
     queryFn: fetchUserCounts,
-    enabled: advancedEnabled,
+    enabled: Boolean(currentUser && advancedEnabled),
   });
 
   const getCount = (id, type) => {
