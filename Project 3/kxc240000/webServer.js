@@ -34,7 +34,7 @@ app.use((req, res, next) => {
 
 mongoose.Promise = bluebird;
 mongoose.set('strictQuery', false);
-mongoose.connect('mongodb://127.0.0.1/project2', {
+mongoose.connect('mongodb://127.0.0.1/project3', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
