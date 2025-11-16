@@ -9,8 +9,7 @@ import bluebird from 'bluebird';
 import express from 'express';
 import session from 'express-session';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import multer from 'multer';
+import { dirname } from 'path';
 import { login, logout } from './controllers/authController.js';
 import {
   register as registerUser,
