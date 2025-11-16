@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -13,7 +13,7 @@ import {
   Avatar,
 } from '@mui/material';
 import './styles.css';
-import AdvancedFeaturesContext from '../../context/AdvancedFeaturesContext.js';
+import useAppStore from '../../store/useAppStore.js';
 import { fetchUserCounts, fetchUsers, queryKeys } from '../../api/index.js';
 
 /**
@@ -24,7 +24,7 @@ import { fetchUserCounts, fetchUsers, queryKeys } from '../../api/index.js';
 export default function UserList() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { advancedEnabled } = useContext(AdvancedFeaturesContext);
+  const advancedEnabled = useAppStore((s) => s.advancedEnabled);
 
   const { data: users = [] } = useQuery({
     queryKey: queryKeys.users,

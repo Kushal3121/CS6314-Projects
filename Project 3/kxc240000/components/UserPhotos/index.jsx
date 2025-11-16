@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -11,7 +11,7 @@ import {
   Divider,
 } from '@mui/material';
 import './styles.css';
-import AdvancedFeaturesContext from '../../context/AdvancedFeaturesContext.js';
+import useAppStore from '../../store/useAppStore.js';
 import { fetchPhotosOfUser, queryKeys } from '../../api/index.js';
 
 export default function UserPhotos() {
@@ -22,7 +22,7 @@ export default function UserPhotos() {
   });
   const [currentIndex, setCurrentIndex] = useState(0);
   const navigate = useNavigate();
-  const { advancedEnabled } = useContext(AdvancedFeaturesContext);
+  const advancedEnabled = useAppStore((s) => s.advancedEnabled);
 
   // Handle photo navigation
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useMemo, useContext } from 'react';
+import React, { useMemo } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -10,8 +10,8 @@ import {
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import './styles.css';
-import AdvancedFeaturesContext from '../../context/AdvancedFeaturesContext.js';
 import { fetchUserById, queryKeys } from '../../api/index.js';
+import useAppStore from '../../store/useAppStore.js';
 
 /**
  * TopBar
@@ -21,9 +21,8 @@ import { fetchUserById, queryKeys } from '../../api/index.js';
  */
 export default function TopBar() {
   const location = useLocation();
-  const { advancedEnabled, setAdvancedEnabled } = useContext(
-    AdvancedFeaturesContext
-  );
+  const advancedEnabled = useAppStore((s) => s.advancedEnabled);
+  const setAdvancedEnabled = useAppStore((s) => s.setAdvancedEnabled);
 
   const { pathPrefix, userId } = useMemo(() => {
     const path = location.pathname;
