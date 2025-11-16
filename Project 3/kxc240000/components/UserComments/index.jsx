@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import {
   Box,
   Typography,
@@ -10,6 +10,11 @@ import {
   CardContent,
 } from '@mui/material';
 import './styles.css';
+import {
+  fetchCommentsOfUser,
+  fetchUserById,
+  queryKeys,
+} from '../../api/index.js';
 
 /**
  * UserComments
@@ -20,9 +25,6 @@ import './styles.css';
 export default function UserComments() {
   // Router param for the user whose comments we are displaying
   const { userId } = useParams();
-  // Local view state
-  const [comments, setComments] = useState([]);
-  const [user, setUser] = useState(null);
   // Imperative navigation helper
   const navigate = useNavigate();
 
@@ -34,26 +36,17 @@ export default function UserComments() {
     navigate(`/photos/${ownerId}/${photoId}`);
   };
 
-  useEffect(() => {
-    // Fetch user comments and the user's basic profile in parallel.
-    // Re-runs when the router param `userId` changes.
-    async function loadData() {
-      try {
-        const [{ data: commentsData }, { data: userData }] = await Promise.all([
-          axios.get(`/commentsOfUser/${userId}`),
-          axios.get(`/user/${userId}`),
-        ]);
-        setComments(commentsData);
-        setUser(userData);
-      } catch (err) {
-        console.error('Failed to load user comments:', err);
-      }
-    }
-    loadData();
-  }, [userId]);
+  const { data: comments = [], isLoading: commentsLoading } = useQuery({
+    queryKey: queryKeys.commentsOfUser(userId),
+    queryFn: () => fetchCommentsOfUser(userId),
+  });
+  const { data: user, isLoading: userLoading } = useQuery({
+    queryKey: queryKeys.user(userId),
+    queryFn: () => fetchUserById(userId),
+  });
 
   // Keep the UI responsive while data is loading.
-  if (!user) return <Typography sx={{ p: 2 }}>Loading...</Typography>;
+  if (userLoading || !user || commentsLoading) return <Typography sx={{ p: 2 }}>Loading...</Typography>;
 
   return (
     <Box className='usercomments-container'>

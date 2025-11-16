@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import {
   List,
   ListItemButton,
@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import './styles.css';
 import AdvancedFeaturesContext from '../../context/AdvancedFeaturesContext.js';
+import { fetchUserCounts, fetchUsers, queryKeys } from '../../api/index.js';
 
 /**
  * UserList
@@ -21,45 +22,20 @@ import AdvancedFeaturesContext from '../../context/AdvancedFeaturesContext.js';
  * When Advanced Mode is ON, shows photo/comment counts.
  */
 export default function UserList() {
-  const [users, setUsers] = useState([]);
-  const [counts, setCounts] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
   const { advancedEnabled } = useContext(AdvancedFeaturesContext);
 
-  useEffect(() => {
-    let mounted = true;
-    async function loadUsers() {
-      try {
-        const { data } = await axios.get('/user/list');
-        if (mounted) setUsers(data);
-      } catch (err) {
-        console.error('Failed to load users:', err);
-      }
-    }
-    loadUsers();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const { data: users = [] } = useQuery({
+    queryKey: queryKeys.users,
+    queryFn: fetchUsers,
+  });
 
-  useEffect(() => {
-    let mounted = true;
-    const loadCounts = async () => {
-      try {
-        const { data } = await axios.get('/user/counts');
-        if (mounted) setCounts(data);
-      } catch (err) {
-        console.error('Failed to load counts:', err);
-      }
-    };
-    if (advancedEnabled) {
-      loadCounts();
-    }
-    return () => {
-      mounted = false;
-    };
-  }, [advancedEnabled]);
+  const { data: counts = [] } = useQuery({
+    queryKey: queryKeys.userCounts,
+    queryFn: fetchUserCounts,
+    enabled: advancedEnabled,
+  });
 
   const getCount = (id, type) => {
     const entry = counts.find((c) => c._id === id);

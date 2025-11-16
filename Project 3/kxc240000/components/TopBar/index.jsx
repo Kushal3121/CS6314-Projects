@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useMemo, useContext } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -8,9 +8,10 @@ import {
   Box,
 } from '@mui/material';
 import { useLocation } from 'react-router-dom';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import './styles.css';
 import AdvancedFeaturesContext from '../../context/AdvancedFeaturesContext.js';
+import { fetchUserById, queryKeys } from '../../api/index.js';
 
 /**
  * TopBar
@@ -20,40 +21,40 @@ import AdvancedFeaturesContext from '../../context/AdvancedFeaturesContext.js';
  */
 export default function TopBar() {
   const location = useLocation();
-  const [rightText, setRightText] = useState('');
   const { advancedEnabled, setAdvancedEnabled } = useContext(
     AdvancedFeaturesContext
   );
 
-  useEffect(() => {
-    async function updateRightText() {
-      const path = location.pathname;
-
-      try {
-        if (path.startsWith('/users/')) {
-          const userId = path.split('/')[2];
-          const { data } = await axios.get(`/user/${userId}`);
-          setRightText(`${data.first_name} ${data.last_name}`);
-        } else if (path.startsWith('/photos/')) {
-          const userId = path.split('/')[2];
-          const { data } = await axios.get(`/user/${userId}`);
-          setRightText(`Photos of ${data.first_name} ${data.last_name}`);
-        } else if (path.startsWith('/comments/')) {
-          const userId = path.split('/')[2];
-          const { data } = await axios.get(`/user/${userId}`);
-          setRightText(`Comments by ${data.first_name} ${data.last_name}`);
-        } else if (path === '/users') {
-          setRightText('All Users');
-        } else {
-          setRightText('');
-        }
-      } catch {
-        setRightText('');
-      }
-    }
-
-    updateRightText();
+  const { pathPrefix, userId } = useMemo(() => {
+    const path = location.pathname;
+    const segments = path.split('/');
+    return {
+      pathPrefix: `/${segments[1] || ''}`,
+      userId: segments[2] || null,
+    };
   }, [location]);
+
+  const { data: user } = useQuery({
+    queryKey: userId ? queryKeys.user(userId) : ['noop'],
+    queryFn: () => fetchUserById(userId),
+    enabled: Boolean(userId && (pathPrefix === '/users' || pathPrefix === '/photos' || pathPrefix === '/comments')),
+  });
+
+  const rightText = useMemo(() => {
+    if (pathPrefix === '/users' && userId && user) {
+      return `${user.first_name} ${user.last_name}`;
+    }
+    if (pathPrefix === '/photos' && userId && user) {
+      return `Photos of ${user.first_name} ${user.last_name}`;
+    }
+    if (pathPrefix === '/comments' && userId && user) {
+      return `Comments by ${user.first_name} ${user.last_name}`;
+    }
+    if (location.pathname === '/users') {
+      return 'All Users';
+    }
+    return '';
+  }, [pathPrefix, userId, user, location.pathname]);
 
   const handleToggle = (event) => {
     setAdvancedEnabled(event.target.checked);

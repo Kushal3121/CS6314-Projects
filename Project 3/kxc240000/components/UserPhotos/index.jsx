@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import {
   Paper,
   Typography,
@@ -12,30 +12,17 @@ import {
 } from '@mui/material';
 import './styles.css';
 import AdvancedFeaturesContext from '../../context/AdvancedFeaturesContext.js';
+import { fetchPhotosOfUser, queryKeys } from '../../api/index.js';
 
 export default function UserPhotos() {
   const { userId, photoId } = useParams();
-  const [photos, setPhotos] = useState([]);
+  const { data: photos = [], isLoading } = useQuery({
+    queryKey: queryKeys.photosOfUser(userId),
+    queryFn: () => fetchPhotosOfUser(userId),
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const navigate = useNavigate();
   const { advancedEnabled } = useContext(AdvancedFeaturesContext);
-
-  // Load photos for user
-  useEffect(() => {
-    let mounted = true;
-    async function loadPhotos() {
-      try {
-        const { data } = await axios.get(`/photosOfUser/${userId}`);
-        if (mounted) setPhotos(data);
-      } catch (err) {
-        console.error('Failed to load photos:', err);
-      }
-    }
-    loadPhotos();
-    return () => {
-      mounted = false;
-    };
-  }, [userId]);
 
   // Handle photo navigation
   useEffect(() => {
@@ -56,7 +43,7 @@ export default function UserPhotos() {
     }
   }, [photoId, photos]);
 
-  if (!photos.length) {
+  if (isLoading || !photos.length) {
     return <Typography sx={{ p: 2 }}>Loading...</Typography>;
   }
 

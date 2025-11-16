@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import {
   Paper,
   Typography,
@@ -11,6 +11,7 @@ import {
   Box,
 } from '@mui/material';
 import './styles.css';
+import { fetchUserById, queryKeys } from '../../api/index.js';
 
 /**
  * UserDetail
@@ -18,27 +19,13 @@ import './styles.css';
  */
 export default function UserDetail() {
   const { userId } = useParams();
-  const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    let mounted = true;
+  const { data: user, isLoading } = useQuery({
+    queryKey: queryKeys.user(userId),
+    queryFn: () => fetchUserById(userId),
+  });
 
-    async function loadUser() {
-      try {
-        const { data } = await axios.get(`/user/${userId}`);
-        if (mounted) setUser(data);
-      } catch (err) {
-        console.error('Failed to load user detail:', err);
-      }
-    }
-
-    loadUser();
-    return () => {
-      mounted = false;
-    };
-  }, [userId]);
-
-  if (!user) {
+  if (isLoading || !user) {
     return <Typography className='detail-loading'>Loading...</Typography>;
   }
 
