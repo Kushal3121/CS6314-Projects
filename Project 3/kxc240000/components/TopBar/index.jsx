@@ -6,11 +6,12 @@ import {
   Switch,
   FormControlLabel,
   Box,
+  Button,
 } from '@mui/material';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import './styles.css';
-import { fetchUserById, logoutRequest, queryKeys } from '../../api/index.js';
+import { fetchUserById, logoutRequest, uploadPhoto, queryKeys } from '../../api/index.js';
 import useAppStore from '../../store/useAppStore.js';
 
 /**
@@ -21,6 +22,7 @@ import useAppStore from '../../store/useAppStore.js';
  */
 export default function TopBar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const advancedEnabled = useAppStore((s) => s.advancedEnabled);
   const setAdvancedEnabled = useAppStore((s) => s.setAdvancedEnabled);
   const currentUser = useAppStore((s) => s.currentUser);
@@ -74,6 +76,25 @@ export default function TopBar() {
     },
   });
 
+  const uploadMutation = useMutation({
+    mutationFn: (file) => uploadPhoto(file),
+    onSuccess: () => {
+      if (currentUser?._id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(currentUser._id) });
+        navigate(`/photos/${currentUser._id}`);
+      }
+    },
+  });
+
+  const handleChooseFile = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadMutation.mutate(file);
+      // reset so same file can be selected again
+      e.target.value = '';
+    }
+  };
+
   return (
     <AppBar position='static' className='topbar-appBar' elevation={2}>
       <Toolbar className='topbar-toolbar'>
@@ -87,10 +108,27 @@ export default function TopBar() {
           {currentUser ? `Hi ${currentUser.first_name}` : rightText}
         </Typography>
 
-        {/* Right - Advanced toggle and Logout */}
+        {/* Right - Add Photo, Advanced toggle and Logout */}
         <Box className='topbar-toggle'>
           {currentUser ? (
             <>
+              <input
+                id='file-input'
+                type='file'
+                accept='image/*'
+                style={{ display: 'none' }}
+                onChange={handleChooseFile}
+              />
+              <Button
+                component='label'
+                htmlFor='file-input'
+                variant='outlined'
+                size='small'
+                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.6)', mr: 1 }}
+                disabled={uploadMutation.isPending}
+              >
+                {uploadMutation.isPending ? 'Uploading...' : 'Add Photo'}
+              </Button>
               <FormControlLabel
                 control={(
                   <Switch

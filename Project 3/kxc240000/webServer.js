@@ -9,7 +9,8 @@ import bluebird from 'bluebird';
 import express from 'express';
 import session from 'express-session';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { dirname, join } from 'path';
+import multer from 'multer';
 
 import User from './schema/user.js';
 import Photo from './schema/photo.js';
@@ -142,6 +143,46 @@ app.use((req, res, next) => {
 });
 
 /* ---------- MAIN ROUTES ---------- */
+
+// Upload new photo for current user
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, join(__dirname, 'images'));
+  },
+  filename: (req, file, cb) => {
+    const ext = (file.originalname || '').split('.').pop();
+    const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    cb(null, `${unique}.${ext || 'jpg'}`);
+  },
+});
+const upload = multer({ storage });
+
+app.post('/photos/new', upload.single('photo'), async (req, res) => {
+  try {
+    const userId = req.session?.user?._id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+    const created = await Photo.create({
+      file_name: req.file.filename,
+      date_time: new Date(),
+      user_id: userId,
+      comments: [],
+    });
+    return res.status(201).json({
+      _id: created._id,
+      file_name: created.file_name,
+      user_id: created.user_id,
+      date_time: created.date_time,
+    });
+  } catch (err) {
+    console.error('Error in POST /photos/new:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // Get list of all users
 app.get('/user/list', async (req, res) => {

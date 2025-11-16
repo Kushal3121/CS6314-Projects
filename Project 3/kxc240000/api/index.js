@@ -51,3 +51,10 @@ export const logoutRequest = async () => {
   const { data } = await apiClient.post('/admin/logout', {});
   return data;
 };
+
+export const uploadPhoto = async (file) => {
+  const form = new FormData();
+  form.append('photo', file);
+  const { data } = await apiClient.post('/photos/new', form);
+  return data;
+};
