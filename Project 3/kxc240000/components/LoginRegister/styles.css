@@ -1,10 +1,10 @@
 /* If your AppBar height is different, tweak this once */
 :root {
-  /* --appbar-h: 64px; */
+  --appbar-h: 64px;
 } /* desktop */
 @media (max-width: 600px) {
   :root {
-    /* --appbar-h: 56px; */
+    --appbar-h: 56px;
   }
 } /* mobile */
 
@@ -17,7 +17,7 @@
 
 /* Kill page scroll and own the viewport area under the AppBar */
 .loginPage {
-  position: fixed;
+  /* position: fixed; */
   top: var(--appbar-h); /* sit right under the toolbar */
   left: 0;
   right: 0;
@@ -28,7 +28,7 @@
   place-items: center;
 
   /* prevent any scroll caused by shadows/borders */
-  overflow: hidden;
+  /* overflow: hidden; */
 
   /* breathing room on small screens */
   padding: 24px;

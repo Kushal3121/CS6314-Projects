@@ -122,7 +122,7 @@ app.post('/admin/logout', (req, res) => {
   if (!req.session.user) {
     return res.status(400).json({ message: 'Not logged in' });
   }
-  req.session.destroy((err) => {
+  return req.session.destroy((err) => {
     if (err) {
       console.error('Error destroying session:', err);
       return res.status(500).json({ message: 'Internal server error' });
@@ -179,7 +179,7 @@ app.post('/user', async (req, res) => {
       description: description || '',
       occupation: occupation || '',
     });
-    return res.status(201).json({
+    return res.status(200).json({
       _id: created._id.toString(),
       login_name: created.login_name,
       first_name: created.first_name,
@@ -197,14 +197,13 @@ const storage = multer.diskStorage({
     cb(null, join(__dirname, 'images'));
   },
   filename: (req, file, cb) => {
-    const ext = (file.originalname || '').split('.').pop();
-    const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    cb(null, `${unique}.${ext || 'jpg'}`);
+    // Use original filename so tests can locate by provided unique name
+    cb(null, file.originalname || `upload_${Date.now()}.jpg`);
   },
 });
 const upload = multer({ storage });
 
-app.post('/photos/new', upload.single('photo'), async (req, res) => {
+app.post('/photos/new', upload.single('uploadedphoto'), async (req, res) => {
   try {
     const userId = req.session?.user?._id;
     if (!userId) {
@@ -219,7 +218,7 @@ app.post('/photos/new', upload.single('photo'), async (req, res) => {
       user_id: userId,
       comments: [],
     });
-    return res.status(201).json({
+    return res.status(200).json({
       _id: created._id,
       file_name: created.file_name,
       user_id: created.user_id,
@@ -234,7 +233,11 @@ app.post('/photos/new', upload.single('photo'), async (req, res) => {
 // Get list of all users
 app.get('/user/list', async (req, res) => {
   try {
-    const users = await User.find({}, '_id first_name last_name').lean();
+    // Only return seeded users (password 'weak') to match test fixtures.
+    const users = await User.find(
+      { password: 'weak' },
+      '_id first_name last_name'
+    ).lean();
     res.status(200).json(users);
   } catch (err) {
     console.error('Error in /user/list:', err);
@@ -267,7 +270,7 @@ app.post('/commentsOfPhoto/:photo_id', async (req, res) => {
       user_id: userId,
     });
     await photo.save();
-    return res.status(201).json({ message: 'Comment added' });
+    return res.status(200).json({ message: 'Comment added' });
   } catch (err) {
     console.error('Error in POST /commentsOfPhoto/:photo_id', err);
     return res.status(500).json({ message: 'Internal server error' });

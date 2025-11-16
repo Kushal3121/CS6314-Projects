@@ -30,7 +30,8 @@ export default function UserPhotos() {
     setNewComments((prev) => ({ ...prev, [photoKey]: text }));
 
   const addCommentMutation = useMutation({
-    mutationFn: ({ photoId, comment }) => postComment({ photoId, comment }),
+    mutationFn: ({ photoId: targetPhotoId, comment }) =>
+      postComment({ photoId: targetPhotoId, comment }),
     onSuccess: () => {
       // refresh photos cache so new comment appears
       queryClient.invalidateQueries({
@@ -125,7 +126,7 @@ export default function UserPhotos() {
                     addCommentMutation.isPending ||
                     !(newComments[p._id] || '').trim()
                   }
-                  onClick={() =>
+                  onClick={() => {
                     addCommentMutation.mutate(
                       {
                         photoId: p._id,
@@ -134,8 +135,8 @@ export default function UserPhotos() {
                       {
                         onSuccess: () => setTextFor(p._id, ''),
                       }
-                    )
-                  }
+                    );
+                  }}
                 >
                   Post
                 </Button>
@@ -337,7 +338,7 @@ export default function UserPhotos() {
                   addCommentMutation.isPending ||
                   !(newComments[photo._id] || '').trim()
                 }
-                onClick={() =>
+                onClick={() => {
                   addCommentMutation.mutate(
                     {
                       photoId: photo._id,
@@ -346,8 +347,8 @@ export default function UserPhotos() {
                     {
                       onSuccess: () => setTextFor(photo._id, ''),
                     }
-                  )
-                }
+                  );
+                }}
               >
                 Post
               </Button>
