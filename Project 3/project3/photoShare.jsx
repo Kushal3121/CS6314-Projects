@@ -4,12 +4,12 @@ import { Grid, Paper } from '@mui/material';
 import { BrowserRouter, Route, Routes, useParams } from 'react-router-dom';
 import './styles/main.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import TopBar from './components/TopBar';
-import UserDetail from './components/UserDetail';
-import UserList from './components/UserList';
-import UserPhotos from './components/UserPhotos';
-import UserComments from './components/UserComments';
-import LoginRegister from './components/LoginRegister';
+import TopBar from './components/TopBar/index.jsx';
+import UserDetail from './components/UserDetail/index.jsx';
+import UserList from './components/UserList/index.jsx';
+import UserPhotos from './components/UserPhotos/index.jsx';
+import UserComments from './components/UserComments/index.jsx';
+import LoginRegister from './components/LoginRegister/index.jsx';
 import useAppStore from './store/useAppStore.js';
 
 // React Query client

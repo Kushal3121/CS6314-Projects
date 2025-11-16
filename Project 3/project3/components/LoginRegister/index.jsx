@@ -11,10 +11,10 @@ import {
   IconButton,
   InputAdornment,
 } from '@mui/material';
-import LoginIcon from '@mui/icons-material/Login';
-import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import LoginIcon from '@mui/icons-material/Login.js';
+import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1.js';
+import Visibility from '@mui/icons-material/Visibility.js';
+import VisibilityOff from '@mui/icons-material/VisibilityOff.js';
 import { loginRequest, registerRequest, queryKeys } from '../../api/index.js';
 import useAppStore from '../../store/useAppStore.js';
 import './styles.css';
