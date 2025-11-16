@@ -42,7 +42,6 @@ export default function LoginRegister() {
   const setCurrentUser = useAppStore((s) => s.setCurrentUser);
   const queryClient = useQueryClient();
 
-  // ---- Login mutation ----
   const loginMutation = useMutation({
     mutationFn: loginRequest,
     onSuccess: (user) => {
@@ -50,12 +49,10 @@ export default function LoginRegister() {
       queryClient.invalidateQueries({ queryKey: queryKeys.users });
       navigate(`/users/${user._id}`);
     },
-    onError: (e) => {
-      setError(e?.response?.data?.message || 'Invalid credentials.');
-    },
+    onError: (e) =>
+      setError(e?.response?.data?.message || 'Invalid credentials.'),
   });
 
-  // ---- Register mutation ----
   const registerMutation = useMutation({
     mutationFn: registerRequest,
     onSuccess: () => {
@@ -72,12 +69,10 @@ export default function LoginRegister() {
         description: '',
       });
     },
-    onError: (e) => {
-      setError(e?.response?.data?.message || 'Registration failed.');
-    },
+    onError: (e) =>
+      setError(e?.response?.data?.message || 'Registration failed.'),
   });
 
-  // ---- Handlers ----
   const handleLogin = (e) => {
     e.preventDefault();
     setError('');
@@ -122,12 +117,9 @@ export default function LoginRegister() {
     });
   };
 
-  const togglePassword = () => setShowPassword((p) => !p);
-  const toggleConfirm = () => setShowConfirm((p) => !p);
-
   return (
     <Box className='authWrapper'>
-      <Paper elevation={6} className='authCardSingle'>
+      <Paper elevation={6} className='authCardSingle hoverCard'>
         <Stack spacing={3} alignItems='center'>
           <Typography variant='h5' fontWeight={700}>
             {isRegister ? 'Create Account' : 'Welcome Back'}
@@ -141,7 +133,6 @@ export default function LoginRegister() {
               : 'Please sign in to continue to your Photo App.'}
           </Typography>
 
-          {/* === LOGIN FORM === */}
           {!isRegister && (
             <form
               onSubmit={handleLogin}
@@ -167,8 +158,8 @@ export default function LoginRegister() {
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position='end'>
-                        <IconButton onClick={togglePassword} edge='end'>
-                          {showPassword ? <Visibility /> : <VisibilityOff />}
+                        <IconButton onClick={() => setShowPassword((p) => !p)}>
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
                       </InputAdornment>
                     ),
@@ -192,13 +183,7 @@ export default function LoginRegister() {
                   type='submit'
                   variant='contained'
                   startIcon={<LoginIcon />}
-                  sx={{
-                    py: 1.2,
-                    fontWeight: 600,
-                    borderRadius: 2,
-                    background:
-                      'linear-gradient(45deg, #1976d2 0%, #42a5f5 100%)',
-                  }}
+                  className='primaryBtn'
                 >
                   {loginMutation.isPending ? 'Logging in...' : 'Login'}
                 </Button>
@@ -206,7 +191,6 @@ export default function LoginRegister() {
             </form>
           )}
 
-          {/* === REGISTER FORM === */}
           {isRegister && (
             <form
               onSubmit={handleRegister}
@@ -259,8 +243,8 @@ export default function LoginRegister() {
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position='end'>
-                        <IconButton onClick={togglePassword} edge='end'>
-                          {showPassword ? <Visibility /> : <VisibilityOff />}
+                        <IconButton onClick={() => setShowPassword((p) => !p)}>
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
                       </InputAdornment>
                     ),
@@ -280,8 +264,8 @@ export default function LoginRegister() {
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position='end'>
-                        <IconButton onClick={toggleConfirm} edge='end'>
-                          {showConfirm ? <Visibility /> : <VisibilityOff />}
+                        <IconButton onClick={() => setShowConfirm((p) => !p)}>
+                          {showConfirm ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
                       </InputAdornment>
                     ),
@@ -311,6 +295,7 @@ export default function LoginRegister() {
                   fullWidth
                   multiline
                   minRows={2}
+                  maxRows={6}
                   value={registerData.description}
                   onChange={(e) =>
                     setRegisterData((s) => ({
@@ -318,6 +303,12 @@ export default function LoginRegister() {
                       description: e.target.value,
                     }))
                   }
+                  sx={{
+                    '& textarea': {
+                      overflowY: 'auto',
+                      maxHeight: '120px',
+                    },
+                  }}
                 />
                 {error && (
                   <Typography variant='body2' color='error' textAlign='center'>
@@ -328,13 +319,7 @@ export default function LoginRegister() {
                   type='submit'
                   variant='contained'
                   startIcon={<PersonAddAlt1Icon />}
-                  sx={{
-                    py: 1.2,
-                    fontWeight: 600,
-                    borderRadius: 2,
-                    background:
-                      'linear-gradient(45deg, #1976d2 0%, #42a5f5 100%)',
-                  }}
+                  className='primaryBtn'
                 >
                   {registerMutation.isPending ? 'Registering...' : 'Register'}
                 </Button>
@@ -342,7 +327,6 @@ export default function LoginRegister() {
             </form>
           )}
 
-          {/* --- Toggle link --- */}
           <Typography variant='body2' sx={{ mt: 2 }}>
             {isRegister ? (
               <>
@@ -353,7 +337,7 @@ export default function LoginRegister() {
                     setError('');
                     setSuccess('');
                   }}
-                  sx={{ textTransform: 'none', p: 0.3 }}
+                  className='linkBtn'
                 >
                   Login here
                 </Button>
@@ -367,7 +351,7 @@ export default function LoginRegister() {
                     setError('');
                     setSuccess('');
                   }}
-                  sx={{ textTransform: 'none', p: 0.3 }}
+                  className='linkBtn'
                 >
                   Register
                 </Button>
