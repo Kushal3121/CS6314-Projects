@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Paper,
   Typography,
@@ -9,10 +9,11 @@ import {
   Stack,
   Avatar,
   Divider,
+  TextField,
 } from '@mui/material';
 import './styles.css';
 import useAppStore from '../../store/useAppStore.js';
-import { fetchPhotosOfUser, queryKeys } from '../../api/index.js';
+import { fetchPhotosOfUser, postComment, queryKeys } from '../../api/index.js';
 
 export default function UserPhotos() {
   const { userId, photoId } = useParams();
@@ -21,8 +22,22 @@ export default function UserPhotos() {
     queryFn: () => fetchPhotosOfUser(userId),
   });
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [newComments, setNewComments] = useState({});
   const navigate = useNavigate();
   const advancedEnabled = useAppStore((s) => s.advancedEnabled);
+  const queryClient = useQueryClient();
+  const setTextFor = (photoKey, text) =>
+    setNewComments((prev) => ({ ...prev, [photoKey]: text }));
+
+  const addCommentMutation = useMutation({
+    mutationFn: ({ photoId, comment }) => postComment({ photoId, comment }),
+    onSuccess: () => {
+      // refresh photos cache so new comment appears
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.photosOfUser(userId),
+      });
+    },
+  });
 
   // Handle photo navigation
   useEffect(() => {
@@ -95,6 +110,42 @@ export default function UserPhotos() {
                 </Stack>
               </Box>
             ))}
+            <Box sx={{ mt: 1.5 }}>
+              <Stack direction='row' spacing={1}>
+                <TextField
+                  size='small'
+                  fullWidth
+                  placeholder='Add a comment...'
+                  value={newComments[p._id] || ''}
+                  onChange={(e) => setTextFor(p._id, e.target.value)}
+                />
+                <Button
+                  variant='contained'
+                  disabled={
+                    addCommentMutation.isPending ||
+                    !(newComments[p._id] || '').trim()
+                  }
+                  onClick={() =>
+                    addCommentMutation.mutate(
+                      {
+                        photoId: p._id,
+                        comment: (newComments[p._id] || '').trim(),
+                      },
+                      {
+                        onSuccess: () => setTextFor(p._id, ''),
+                      }
+                    )
+                  }
+                >
+                  Post
+                </Button>
+              </Stack>
+              {addCommentMutation.isError ? (
+                <Typography variant='caption' color='error'>
+                  Failed to add comment
+                </Typography>
+              ) : null}
+            </Box>
           </Paper>
         ))}
       </Box>
@@ -270,6 +321,42 @@ export default function UserPhotos() {
                 No comments yet.
               </Typography>
             )}
+          </Box>
+          <Box sx={{ mt: 1 }}>
+            <Stack direction='row' spacing={1}>
+              <TextField
+                size='small'
+                fullWidth
+                placeholder='Add a comment...'
+                value={newComments[photo._id] || ''}
+                onChange={(e) => setTextFor(photo._id, e.target.value)}
+              />
+              <Button
+                variant='contained'
+                disabled={
+                  addCommentMutation.isPending ||
+                  !(newComments[photo._id] || '').trim()
+                }
+                onClick={() =>
+                  addCommentMutation.mutate(
+                    {
+                      photoId: photo._id,
+                      comment: (newComments[photo._id] || '').trim(),
+                    },
+                    {
+                      onSuccess: () => setTextFor(photo._id, ''),
+                    }
+                  )
+                }
+              >
+                Post
+              </Button>
+            </Stack>
+            {addCommentMutation.isError ? (
+              <Typography variant='caption' color='error'>
+                Failed to add comment
+              </Typography>
+            ) : null}
           </Box>
         </Box>
       </Paper>

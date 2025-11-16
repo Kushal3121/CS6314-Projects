@@ -154,6 +154,38 @@ app.get('/user/list', async (req, res) => {
   }
 });
 
+// Add a new comment to a photo
+app.post('/commentsOfPhoto/:photo_id', async (req, res) => {
+  const { photo_id } = req.params;
+  const { comment } = req.body || {};
+  try {
+    if (!comment || !comment.trim()) {
+      return res.status(400).json({ message: 'Comment text required' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(photo_id)) {
+      return res.status(400).json({ message: 'Invalid photo id' });
+    }
+    const photo = await Photo.findById(photo_id);
+    if (!photo) {
+      return res.status(404).json({ message: 'Photo not found' });
+    }
+    const userId = req.session?.user?._id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    photo.comments.push({
+      comment: comment.trim(),
+      date_time: new Date(),
+      user_id: userId,
+    });
+    await photo.save();
+    return res.status(201).json({ message: 'Comment added' });
+  } catch (err) {
+    console.error('Error in POST /commentsOfPhoto/:photo_id', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Return photo + comment counts per user
 app.get('/user/counts', async (req, res) => {
   try {

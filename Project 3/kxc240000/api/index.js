@@ -35,6 +35,13 @@ export const fetchCommentsOfUser = async (userId) => {
   return data;
 };
 
+export const postComment = async ({ photoId, comment }) => {
+  const { data } = await apiClient.post(`/commentsOfPhoto/${photoId}`, {
+    comment,
+  });
+  return data;
+};
+
 export const loginRequest = async ({ login_name }) => {
   const { data } = await apiClient.post('/admin/login', { login_name });
   return data;
