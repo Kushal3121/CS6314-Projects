@@ -11,6 +11,22 @@ import session from 'express-session';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import multer from 'multer';
+import { login, logout } from './controllers/authController.js';
+import {
+  register as registerUser,
+  listUsers,
+  getUserById,
+  getCounts,
+} from './controllers/userController.js';
+import {
+  uploadMiddleware as uploadPhotoMiddleware,
+  uploadPhoto as uploadPhotoHandler,
+  getPhotosOfUser as getPhotosOfUserHandler,
+} from './controllers/photoController.js';
+import {
+  addCommentToPhoto as addCommentToPhotoHandler,
+  getCommentsOfUser as getCommentsOfUserHandler,
+} from './controllers/commentController.js';
 
 import User from './schema/user.js';
 import Photo from './schema/photo.js';
@@ -93,43 +109,8 @@ app.get('/test/counts', async (req, res) => {
 });
 
 /* ---------- AUTH ROUTES ---------- */
-app.post('/admin/login', async (req, res) => {
-  const { login_name, password } = req.body || {};
-  if (!login_name || !password) {
-    return res
-      .status(400)
-      .json({ message: 'login_name and password required' });
-  }
-  try {
-    const user = await User.findOne({ login_name }).lean();
-    if (!user || user.password !== password) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-    req.session.user = {
-      _id: user._id.toString(),
-      login_name: user.login_name,
-    };
-    // return only properties UI needs (avoid password)
-    const { _id, first_name, last_name, login_name: ln } = user;
-    return res.status(200).json({ _id, first_name, last_name, login_name: ln });
-  } catch (err) {
-    console.error('Error in /admin/login:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-app.post('/admin/logout', (req, res) => {
-  if (!req.session.user) {
-    return res.status(400).json({ message: 'Not logged in' });
-  }
-  return req.session.destroy((err) => {
-    if (err) {
-      console.error('Error destroying session:', err);
-      return res.status(500).json({ message: 'Internal server error' });
-    }
-    return res.status(200).json({ message: 'Logged out' });
-  });
-});
+app.post('/admin/login', login);
+app.post('/admin/logout', logout);
 
 /* ---------- AUTH GUARD FOR MAIN API ROUTES ---------- */
 // Allow unauthenticated access to test routes and auth endpoints only
@@ -150,265 +131,28 @@ app.use((req, res, next) => {
 /* ---------- MAIN ROUTES ---------- */
 
 // Registration
-app.post('/user', async (req, res) => {
-  try {
-    const {
-      login_name,
-      password,
-      first_name,
-      last_name,
-      location,
-      description,
-      occupation,
-    } = req.body || {};
-    if (!login_name || !password || !first_name || !last_name) {
-      return res.status(400).json({
-        message: 'login_name, password, first_name, last_name required',
-      });
-    }
-    const existing = await User.findOne({ login_name }).lean();
-    if (existing) {
-      return res.status(400).json({ message: 'login_name already exists' });
-    }
-    const created = await User.create({
-      login_name,
-      password,
-      first_name,
-      last_name,
-      location: location || '',
-      description: description || '',
-      occupation: occupation || '',
-    });
-    return res.status(200).json({
-      _id: created._id.toString(),
-      login_name: created.login_name,
-      first_name: created.first_name,
-      last_name: created.last_name,
-    });
-  } catch (err) {
-    console.error('Error in POST /user:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+app.post('/user', registerUser);
 
 // Upload new photo for current user
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, join(__dirname, 'images'));
-  },
-  filename: (req, file, cb) => {
-    // Use original filename so tests can locate by provided unique name
-    cb(null, file.originalname || `upload_${Date.now()}.jpg`);
-  },
-});
-const upload = multer({ storage });
-
-app.post('/photos/new', upload.single('uploadedphoto'), async (req, res) => {
-  try {
-    const userId = req.session?.user?._id;
-    if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-    const created = await Photo.create({
-      file_name: req.file.filename,
-      date_time: new Date(),
-      user_id: userId,
-      comments: [],
-    });
-    return res.status(200).json({
-      _id: created._id,
-      file_name: created.file_name,
-      user_id: created.user_id,
-      date_time: created.date_time,
-    });
-  } catch (err) {
-    console.error('Error in POST /photos/new:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+app.post('/photos/new', uploadPhotoMiddleware, uploadPhotoHandler);
 
 // Get list of all users
-app.get('/user/list', async (req, res) => {
-  try {
-    // Only return seeded users (password 'weak') to match test fixtures.
-    const users = await User.find(
-      { password: 'weak' },
-      '_id first_name last_name'
-    ).lean();
-    res.status(200).json(users);
-  } catch (err) {
-    console.error('Error in /user/list:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
+app.get('/user/list', listUsers);
 
 // Add a new comment to a photo
-app.post('/commentsOfPhoto/:photo_id', async (req, res) => {
-  const { photo_id } = req.params;
-  const { comment } = req.body || {};
-  try {
-    if (!comment || !comment.trim()) {
-      return res.status(400).json({ message: 'Comment text required' });
-    }
-    if (!mongoose.Types.ObjectId.isValid(photo_id)) {
-      return res.status(400).json({ message: 'Invalid photo id' });
-    }
-    const photo = await Photo.findById(photo_id);
-    if (!photo) {
-      return res.status(404).json({ message: 'Photo not found' });
-    }
-    const userId = req.session?.user?._id;
-    if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-    photo.comments.push({
-      comment: comment.trim(),
-      date_time: new Date(),
-      user_id: userId,
-    });
-    await photo.save();
-    return res.status(200).json({ message: 'Comment added' });
-  } catch (err) {
-    console.error('Error in POST /commentsOfPhoto/:photo_id', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+app.post('/commentsOfPhoto/:photo_id', addCommentToPhotoHandler);
 
 // Return photo + comment counts per user
-app.get('/user/counts', async (req, res) => {
-  try {
-    const users = await User.find({}, '_id first_name last_name').lean();
-    const photos = await Photo.find({}).lean();
-
-    const counts = users.map((u) => ({
-      _id: u._id.toString(),
-      photoCount: 0,
-      commentCount: 0,
-    }));
-
-    for (const photo of photos) {
-      const userId = photo.user_id?.toString?.() || photo.user_id;
-      if (userId) {
-        const userMatch = counts.find((c) => c._id === userId);
-        if (userMatch) userMatch.photoCount += 1;
-      }
-
-      for (const c of photo.comments || []) {
-        const commenterId = c.user_id?.toString?.() || c.user_id;
-        if (commenterId) {
-          const commenter = counts.find((x) => x._id === commenterId);
-          if (commenter) commenter.commentCount += 1;
-        }
-      }
-    }
-
-    res.status(200).json(counts);
-  } catch (err) {
-    console.error('Error in /user/counts:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
+app.get('/user/counts', getCounts);
 
 // Get user details by ID
-app.get('/user/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid user id' });
-    }
-    const user =
-      (await User.findById(
-        id,
-        '_id first_name last_name location description occupation'
-      ).lean()) ||
-      (await User.findOne(
-        { _id: id },
-        '_id first_name last_name location description occupation'
-      ).lean());
-
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    return res.status(200).json(user);
-  } catch (err) {
-    console.error('Error in /user/:id:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+app.get('/user/:id', getUserById);
 
 // Get photos of a specific user
-app.get('/photosOfUser/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid user id' });
-    }
-    const photos = await Photo.find({
-      $or: [{ user_id: id }, { user_id: new mongoose.Types.ObjectId(id) }],
-    })
-      .select('_id user_id comments file_name date_time')
-      .lean();
-
-    if (!photos || photos.length === 0) {
-      return res.status(404).json({ message: 'No photos found for this user' });
-    }
-
-    // Populate commenter info without awaiting inside a tight loop
-    const populationPromises = photos.map(async (photo) => {
-      const commentPromises = (photo.comments || []).map(async (comment) => {
-        const commenterId = comment.user_id?.toString?.() || comment.user_id;
-        const user = await User.findOne(
-          { _id: commenterId },
-          '_id first_name last_name'
-        ).lean();
-        comment.user = user || null;
-        delete comment.user_id;
-      });
-      await Promise.all(commentPromises);
-    });
-    await Promise.all(populationPromises);
-
-    return res.status(200).json(photos);
-  } catch (err) {
-    console.error('Error in /photosOfUser/:id:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+app.get('/photosOfUser/:id', getPhotosOfUserHandler);
 
 // Return all comments authored by a user (with thumbnails)
-app.get('/commentsOfUser/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const photos = await Photo.find({
-      'comments.user_id': { $in: [id, new mongoose.Types.ObjectId(id)] },
-    })
-      .select('_id user_id file_name comments')
-      .lean();
-
-    const result = [];
-    for (const photo of photos) {
-      for (const c of photo.comments || []) {
-        if ((c.user_id?.toString?.() || c.user_id) === id) {
-          result.push({
-            photo_id: photo._id,
-            owner_id: photo.user_id?.toString?.() || photo.user_id,
-            file_name: photo.file_name,
-            comment: c.comment,
-            date_time: c.date_time,
-          });
-        }
-      }
-    }
-
-    return res.status(200).json(result);
-  } catch (err) {
-    console.error('Error in /commentsOfUser/:id', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+app.get('/commentsOfUser/:id', getCommentsOfUserHandler);
 
 /* ---------- START SERVER ---------- */
 const server = app.listen(portno, () => {

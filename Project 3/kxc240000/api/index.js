@@ -57,7 +57,8 @@ export const logoutRequest = async () => {
 
 export const uploadPhoto = async (file) => {
   const form = new FormData();
-  form.append('photo', file);
+  // Server (and tests) expect field name 'uploadedphoto'
+  form.append('uploadedphoto', file);
   const { data } = await apiClient.post('/photos/new', form);
   return data;
 };

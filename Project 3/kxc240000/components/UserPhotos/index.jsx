@@ -59,8 +59,11 @@ export default function UserPhotos() {
     }
   }, [photoId, photos]);
 
-  if (isLoading || !photos.length) {
+  if (isLoading) {
     return <Typography sx={{ p: 2 }}>Loading...</Typography>;
+  }
+  if (!photos.length) {
+    return <Typography sx={{ p: 2 }}>No photos yet.</Typography>;
   }
 
   /* ---------- NORMAL GALLERY MODE ---------- */
