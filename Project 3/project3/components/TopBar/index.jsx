@@ -46,7 +46,10 @@ export default function TopBar() {
 
   const rightText = useMemo(() => {
     if (!currentUser) {
-      return 'Please Login';
+      if (location.pathname === '/login-register') {
+        return 'Login / Register';
+      }
+      return '';
     }
     if (pathPrefix === '/users' && userId && user) {
       return `${user.first_name} ${user.last_name}`;
@@ -98,14 +101,14 @@ export default function TopBar() {
   return (
     <AppBar position='static' className='topbar-appBar' elevation={2}>
       <Toolbar className='topbar-toolbar'>
-        {/* Left - Developer name */}
+        {/* Left - Greeting / login prompt */}
         <Typography variant='h6' className='topbar-left'>
-          Kushal Choudhary
+          {currentUser ? `Hi ${currentUser.first_name}` : 'Please Login'}
         </Typography>
 
-        {/* Center - Page context or greeting */}
+        {/* Center - Page context */}
         <Typography variant='h6' className='topbar-center' noWrap>
-          {currentUser ? `Hi ${currentUser.first_name}` : rightText}
+          {rightText}
         </Typography>
 
         {/* Right - Add Photo, Advanced toggle and Logout */}
