@@ -5,8 +5,9 @@ export async function addCommentToPhoto(req, res) {
   const { photo_id } = req.params;
   const { comment } = req.body || {};
   try {
-    if (!comment || !comment.trim()) {
-      return res.status(400).json({ message: 'Comment text required' });
+    const trimmed = (comment || '').trim();
+    if (!trimmed) {
+      return res.status(400).json({ message: 'Comment cannot be empty' });
     }
     if (!mongoose.Types.ObjectId.isValid(photo_id)) {
       return res.status(400).json({ message: 'Invalid photo id' });
@@ -20,7 +21,7 @@ export async function addCommentToPhoto(req, res) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
     photo.comments.push({
-      comment: comment.trim(),
+      comment: trimmed,
       date_time: new Date(),
       user_id: userId,
     });
@@ -64,5 +65,4 @@ export async function getCommentsOfUser(req, res) {
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
-
 
