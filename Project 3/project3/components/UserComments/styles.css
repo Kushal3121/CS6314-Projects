@@ -1,13 +1,20 @@
 .usercomments-container {
-  padding: 16px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(243, 246, 255, 0.7));
+  border-radius: 28px;
+  box-shadow: 0 25px 60px rgba(13, 16, 38, 0.18);
 }
 
 .usercomment-card {
-  padding: 8px;
-  margin-bottom: 16px;
-  transition: transform 0.15s ease-in-out;
+  padding: 18px;
+  margin-bottom: 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(12, 22, 74, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .usercomment-card:hover {
-  transform: scale(1.01);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(12, 22, 74, 0.15);
 }
