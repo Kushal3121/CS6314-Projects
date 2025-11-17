@@ -37,6 +37,7 @@ export default function UserPhotos() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.photosOfUser(userId),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
     },
   });
 
