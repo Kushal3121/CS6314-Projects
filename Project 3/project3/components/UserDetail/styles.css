@@ -1,18 +1,24 @@
 .user-detail-wide {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(249, 250, 255, 0.7));
-  border-radius: 30px;
-  padding: 40px;
+  justify-content: flex-start;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(240, 248, 255, 0.9)
+  );
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 32px;
   gap: 32px;
-  box-shadow: 0 25px 60px rgba(19, 26, 56, 0.2);
-  border: 1px solid rgba(15, 30, 84, 0.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  margin: 0 auto;
 }
 
 .user-detail-wide:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 35px 70px rgba(19, 26, 56, 0.28);
+  box-shadow: 0 8px 28px rgba(25, 118, 210, 0.15);
+  transform: translateY(-3px);
 }
 
 /* Avatar section */
@@ -24,13 +30,13 @@
 }
 
 .user-detail-avatar-large {
-  background: linear-gradient(180deg, #5b2cff, #8a74ff) !important;
+  background-color: #298bee !important;
   color: #fff !important;
-  width: 120px !important;
-  height: 120px !important;
-  font-size: 40px !important;
+  width: 110px !important;
+  height: 110px !important;
+  font-size: 36px !important;
   font-weight: 600 !important;
-  box-shadow: 0 20px 40px rgba(91, 44, 255, 0.35);
+  box-shadow: 0 6px 16px rgba(25, 118, 210, 0.3);
 }
 
 /* Info section */
@@ -44,44 +50,44 @@
 
 .user-detail-name {
   font-weight: 700;
-  color: #101436;
-  letter-spacing: 1px;
-  margin-bottom: 16px;
-  font-size: 2rem;
+  color: #0d47a1;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
 }
 
 .user-detail-divider {
   width: 100%;
-  margin: 12px 0 18px;
-  opacity: 0.25;
+  margin: 8px 0 12px;
+  opacity: 0.4;
 }
 
 .user-detail-meta {
-  color: #2b314a;
-  font-size: 1rem;
-  margin: 18px 0;
-  line-height: 1.5;
+  color: #333;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+  margin-top: 16px;
 }
 
 .meta-line span {
-  font-weight: 600;
-  color: #101436;
+  font-weight: 500;
+  color: #111;
 }
 
 .view-photos-btn-wide {
-  background: linear-gradient(135deg, #ff8f70, #ff3d54);
+  background: linear-gradient(135deg, #1976d2, #42a5f5);
   text-transform: none !important;
   font-weight: 600 !important;
   color: white !important;
-  padding: 10px 28px !important;
-  border-radius: 999px !important;
+  padding: 8px 26px !important;
+  border-radius: 24px !important;
   align-self: flex-start;
-  box-shadow: 0 15px 30px rgba(255, 61, 84, 0.35);
+  box-shadow: 0 4px 10px rgba(25, 118, 210, 0.25);
+  transition: all 0.25s ease;
 }
 
 .view-photos-btn-wide:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #1565c0, #1e88e5);
+  transform: scale(1.05);
 }
 
 .detail-loading {
