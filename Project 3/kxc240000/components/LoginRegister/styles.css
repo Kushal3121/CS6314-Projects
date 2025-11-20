@@ -1,0 +1,77 @@
+:root {
+  --appbar-h: 64px;
+}
+@media (max-width: 600px) {
+  :root {
+    --appbar-h: 56px;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+}
+
+.authWrapper {
+  position: fixed;
+  top: var(--appbar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(160deg, #e3f2fd 0%, #f9fbfc 50%, #ffffff 100%);
+  padding: 24px;
+}
+
+.authCardSingle {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 20px;
+  padding: 48px 40px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+  animation: fadeIn 0.35s ease-out;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* button style */
+.primaryBtn {
+  padding: 0rem 1.2rem;
+  text-transform: none !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(45deg, #1976d2 0%, #42a5f5 100%) !important;
+  transition: all 0.25s ease;
+}
+.primaryBtn:hover {
+  background: linear-gradient(45deg, #1565c0 0%, #1e88e5 100%) !important;
+  box-shadow: 0 6px 18px rgba(25, 118, 210, 0.3) !important;
+}
+
+/* link buttons */
+.linkBtn {
+  text-transform: none !important;
+  padding: 0 4px !important;
+  min-width: unset !important;
+  color: #1976d2 !important;
+}
+.linkBtn:hover {
+  text-decoration: underline;
+}
+
+/* animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
