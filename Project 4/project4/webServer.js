@@ -16,6 +16,7 @@ import {
   listUsers,
   getUserById,
   getCounts,
+  getUsageHighlights,
 } from './controllers/userController.js';
 import {
   uploadMiddleware as uploadPhotoMiddleware,
@@ -146,6 +147,9 @@ app.get('/user/counts', getCounts);
 
 // Get user details by ID
 app.get('/user/:id', getUserById);
+
+// Get user highlights (most recent / most commented photo)
+app.get('/user/:id/highlights', getUsageHighlights);
 
 // Get photos of a specific user
 app.get('/photosOfUser/:id', getPhotosOfUserHandler);

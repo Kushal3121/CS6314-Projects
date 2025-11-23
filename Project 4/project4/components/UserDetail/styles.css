@@ -96,3 +96,67 @@
   color: gray;
   font-style: italic;
 }
+
+/* Usage section */
+.usage-section {
+  margin: 8px 0 20px;
+}
+.usage-title {
+  font-weight: 600;
+  color: #0d47a1;
+  margin-bottom: 8px;
+}
+.usage-cards {
+  display: flex;
+}
+.usage-card {
+  text-transform: none !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+  border-radius: 12px !important;
+}
+.usage-card:disabled {
+  opacity: 0.6;
+}
+.usage-card-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid #e5eef9;
+  border-radius: 12px;
+  padding: 8px 10px;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.usage-card:hover .usage-card-inner {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.18);
+}
+.usage-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e6e6e6;
+}
+.usage-thumb-empty {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  border: 1px dashed #d0d7e2;
+  background: #f7faff;
+}
+.usage-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.usage-label {
+  font-weight: 600 !important;
+  color: #1976d2;
+  line-height: 1.2;
+}
+.usage-sub {
+  color: #555;
+}

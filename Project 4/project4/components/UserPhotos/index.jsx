@@ -60,6 +60,16 @@ export default function UserPhotos() {
     }
   }, [photoId, photos]);
 
+  // If in gallery mode, scroll the selected photo into view
+  useEffect(() => {
+    if (!photos.length || !photoId) return;
+    if (advancedEnabled) return;
+    const el = document.getElementById(`photo-card-${photoId}`);
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [photos, photoId, advancedEnabled]);
+
   if (isLoading) {
     return <Typography sx={{ p: 2 }}>Loading...</Typography>;
   }
@@ -72,7 +82,12 @@ export default function UserPhotos() {
     return (
       <Box className='gallery-container'>
         {photos.map((p) => (
-          <Paper key={p._id} elevation={2} className='photo-card-modern'>
+          <Paper
+            key={p._id}
+            id={`photo-card-${p._id}`}
+            elevation={2}
+            className='photo-card-modern'
+          >
             <img
               src={`/images/${p.file_name}`}
               alt='user upload'

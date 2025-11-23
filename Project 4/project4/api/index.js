@@ -7,6 +7,7 @@ export const queryKeys = {
   userCounts: ['userCounts'],
   photosOfUser: (userId) => ['photosOfUser', userId],
   commentsOfUser: (userId) => ['commentsOfUser', userId],
+  userHighlights: (userId) => ['userHighlights', userId],
 };
 
 // API Calls
@@ -35,6 +36,10 @@ export const fetchCommentsOfUser = async (userId) => {
   return data;
 };
 
+export const fetchUserHighlights = async (userId) => {
+  const { data } = await apiClient.get(`/user/${userId}/highlights`);
+  return data;
+};
 export const postComment = async ({ photoId, comment }) => {
   const { data } = await apiClient.post(`/commentsOfPhoto/${photoId}`, {
     comment,

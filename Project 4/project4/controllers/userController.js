@@ -134,3 +134,67 @@ export async function getCounts(req, res) {
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
+
+/**
+ * GET /user/:id/highlights
+ * Returns the most recent photo and the most commented photo for a given user.
+ * Each object contains: _id, file_name, date_time, commentsCount.
+ */
+export async function getUsageHighlights(req, res) {
+  const { id } = req.params;
+  try {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid user id' });
+    }
+    const objectId = new mongoose.Types.ObjectId(id);
+
+    // Most recent photo
+    const recentAgg = await Photo.aggregate([
+      {
+        $match: {
+          $or: [{ user_id: objectId }, { user_id: id }],
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          file_name: 1,
+          date_time: 1,
+          commentsCount: { $size: { $ifNull: ['$comments', []] } },
+        },
+      },
+      { $sort: { date_time: -1 } },
+      { $limit: 1 },
+    ]);
+    const mostRecent = recentAgg[0] || null;
+
+    // Most commented photo (tie-breaker: most recent)
+    const mostCommentedAgg = await Photo.aggregate([
+      {
+        $match: {
+          $or: [{ user_id: objectId }, { user_id: id }],
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          file_name: 1,
+          date_time: 1,
+          commentsCount: { $size: { $ifNull: ['$comments', []] } },
+        },
+      },
+      { $sort: { commentsCount: -1, date_time: -1 } },
+      { $limit: 1 },
+    ]);
+    const mostCommented = mostCommentedAgg[0] || null;
+
+    return res.status(200).json({
+      mostRecent,
+      mostCommented,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Error in /user/:id/highlights:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}

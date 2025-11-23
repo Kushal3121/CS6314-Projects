@@ -11,7 +11,11 @@ import {
   Box,
 } from '@mui/material';
 import './styles.css';
-import { fetchUserById, queryKeys } from '../../api/index.js';
+import {
+  fetchUserById,
+  fetchUserHighlights,
+  queryKeys,
+} from '../../api/index.js';
 
 /**
  * UserDetail
@@ -23,6 +27,10 @@ export default function UserDetail() {
   const { data: user, isLoading } = useQuery({
     queryKey: queryKeys.user(userId),
     queryFn: () => fetchUserById(userId),
+  });
+  const { data: highlights } = useQuery({
+    queryKey: queryKeys.userHighlights(userId),
+    queryFn: () => fetchUserHighlights(userId),
   });
 
   if (isLoading || !user) {
@@ -57,6 +65,86 @@ export default function UserDetail() {
             📝 <span>{user.description || 'No description available'}</span>
           </Typography>
         </Stack>
+
+        {/* Usage section */}
+        <Box className='usage-section'>
+          <Typography variant='subtitle1' className='usage-title'>
+            Usage
+          </Typography>
+          <Stack direction='row' spacing={2} className='usage-cards'>
+            {/* Most recent photo */}
+            <Button
+              variant='text'
+              className='usage-card'
+              component={Link}
+              to={
+                highlights?.mostRecent
+                  ? `/photos/${user._id}/${highlights.mostRecent._id}`
+                  : `/photos/${user._id}`
+              }
+              disabled={!highlights?.mostRecent}
+            >
+              <Box className='usage-card-inner'>
+                {highlights?.mostRecent ? (
+                  <img
+                    className='usage-thumb'
+                    alt='most recent'
+                    src={`/images/${highlights.mostRecent.file_name}`}
+                  />
+                ) : (
+                  <Box className='usage-thumb-empty' />
+                )}
+                <Box className='usage-meta'>
+                  <Typography variant='body2' className='usage-label'>
+                    Most Recent
+                  </Typography>
+                  <Typography variant='caption' className='usage-sub'>
+                    {highlights?.mostRecent
+                      ? new Date(
+                          highlights.mostRecent.date_time
+                        ).toLocaleString()
+                      : 'No photos'}
+                  </Typography>
+                </Box>
+              </Box>
+            </Button>
+
+            {/* Most commented photo */}
+            <Button
+              variant='text'
+              className='usage-card'
+              component={Link}
+              to={
+                highlights?.mostCommented
+                  ? `/photos/${user._id}/${highlights.mostCommented._id}`
+                  : `/photos/${user._id}`
+              }
+              disabled={!highlights?.mostCommented}
+            >
+              <Box className='usage-card-inner'>
+                {highlights?.mostCommented ? (
+                  <img
+                    className='usage-thumb'
+                    alt='most commented'
+                    src={`/images/${highlights.mostCommented.file_name}`}
+                  />
+                ) : (
+                  <Box className='usage-thumb-empty' />
+                )}
+                <Box className='usage-meta'>
+                  <Typography variant='body2' className='usage-label'>
+                    Most Commented
+                  </Typography>
+                  <Typography variant='caption' className='usage-sub'>
+                    {highlights?.mostCommented
+                      ? `${highlights.mostCommented.commentsCount} comments`
+                      : 'No photos'}
+                  </Typography>
+                </Box>
+              </Box>
+            </Button>
+          </Stack>
+        </Box>
 
         <Button
           variant='contained'
