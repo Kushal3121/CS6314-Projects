@@ -32,6 +32,7 @@ import {
 import User from './schema/user.js';
 import Photo from './schema/photo.js';
 import SchemaInfo from './schema/schemaInfo.js';
+import { getRecentActivities } from './controllers/activityController.js';
 
 const portno = 3001;
 const app = express();
@@ -180,6 +181,9 @@ app.get('/commentsOfUser/:id', getCommentsOfUserHandler);
 
 // Return all photos where the user is @mentioned
 app.get('/mentionsOfUser/:id', getMentionsOfUserHandler);
+
+// Activities feed (recent N, default 5)
+app.get('/activities', getRecentActivities);
 
 /* ---------- START SERVER ---------- */
 const server = app.listen(portno, () => {

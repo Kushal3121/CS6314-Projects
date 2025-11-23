@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import User from '../schema/user.js';
 import Photo from '../schema/photo.js';
+import { logActivity } from './activityController.js';
 
 export async function register(req, res) {
   try {
@@ -31,6 +32,8 @@ export async function register(req, res) {
       description: description || '',
       occupation: occupation || '',
     });
+    // Log user registration (non-blocking)
+    await logActivity({ type: 'user_register', userId: created._id });
     return res.status(200).json({
       _id: created._id.toString(),
       login_name: created.login_name,

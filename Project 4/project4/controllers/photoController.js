@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import multer from 'multer';
 import Photo from '../schema/photo.js';
 import User from '../schema/user.js';
+import { logActivity } from './activityController.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -66,6 +67,13 @@ export async function uploadPhoto(req, res) {
       // - shared_with === [] -> owner only
       // - shared_with contains ids -> restricted
       ...(sharedWithIds !== undefined ? { shared_with: sharedWithIds } : {}),
+    });
+    // Log photo upload
+    await logActivity({
+      type: 'photo_upload',
+      userId,
+      photoId: created._id,
+      photoFileName: created.file_name,
     });
     return res.status(200).json({
       _id: created._id,

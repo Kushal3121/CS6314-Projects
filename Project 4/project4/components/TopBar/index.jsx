@@ -24,7 +24,13 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import './styles.css';
-import { fetchUserById, fetchUsers, logoutRequest, uploadPhoto, queryKeys } from '../../api/index.js';
+import {
+  fetchUserById,
+  fetchUsers,
+  logoutRequest,
+  uploadPhoto,
+  queryKeys,
+} from '../../api/index.js';
 import useAppStore from '../../store/useAppStore.js';
 
 /**
@@ -63,7 +69,12 @@ export default function TopBar() {
   const { data: user } = useQuery({
     queryKey: userId ? queryKeys.user(userId) : ['noop'],
     queryFn: () => fetchUserById(userId),
-    enabled: Boolean(userId && (pathPrefix === '/users' || pathPrefix === '/photos' || pathPrefix === '/comments')),
+    enabled: Boolean(
+      userId &&
+        (pathPrefix === '/users' ||
+          pathPrefix === '/photos' ||
+          pathPrefix === '/comments')
+    ),
   });
 
   const rightText = useMemo(() => {
@@ -81,6 +92,9 @@ export default function TopBar() {
     }
     if (pathPrefix === '/comments' && userId && user) {
       return `Comments by ${user.first_name} ${user.last_name}`;
+    }
+    if (location.pathname === '/activities') {
+      return 'Recent Activities';
     }
     if (location.pathname === '/users') {
       return 'All Users';
@@ -102,11 +116,15 @@ export default function TopBar() {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: ({ file, sharedWithIds }) => uploadPhoto(file, { sharedWith: sharedWithIds }),
+    mutationFn: ({ file, sharedWithIds }) =>
+      uploadPhoto(file, { sharedWith: sharedWithIds }),
     onSuccess: () => {
       if (currentUser?._id) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(currentUser._id) });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.photosOfUser(currentUser._id),
+        });
         queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
+        queryClient.invalidateQueries({ queryKey: queryKeys.activities(5) });
         navigate(`/photos/${currentUser._id}`);
       }
     },
@@ -156,13 +174,36 @@ export default function TopBar() {
               <Button
                 variant='outlined'
                 size='small'
-                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.6)', mr: 1 }}
+                sx={{
+                  color: 'white',
+                  borderColor: 'rgba(255,255,255,0.6)',
+                  textTransform: 'none',
+                  mr: 1,
+                }}
+                onClick={() => navigate('/activities')}
+              >
+                Activities
+              </Button>
+              <Button
+                variant='outlined'
+                size='small'
+                sx={{
+                  color: 'white',
+                  borderColor: 'rgba(255,255,255,0.6)',
+                  textTransform: 'none',
+                  mr: 1,
+                }}
                 disabled={uploadMutation.isPending}
                 onClick={startUploadFlow}
               >
                 {uploadMutation.isPending ? 'Uploading...' : 'Add Photo'}
               </Button>
-              <Dialog open={uploadOpen} onClose={() => setUploadOpen(false)} maxWidth='sm' fullWidth>
+              <Dialog
+                open={uploadOpen}
+                onClose={() => setUploadOpen(false)}
+                maxWidth='sm'
+                fullWidth
+              >
                 <DialogTitle>Upload Photo</DialogTitle>
                 <DialogContent dividers>
                   <Box sx={{ my: 1 }}>
@@ -186,25 +227,44 @@ export default function TopBar() {
                       value={visibility}
                       onChange={(e) => setVisibility(e.target.value)}
                     >
-                      <FormControlLabel value='public' control={<Radio />} label='Public' />
-                      <FormControlLabel value='private' control={<Radio />} label='Only me' />
-                      <FormControlLabel value='shared' control={<Radio />} label='Share with...' />
+                      <FormControlLabel
+                        value='public'
+                        control={<Radio />}
+                        label='Public'
+                      />
+                      <FormControlLabel
+                        value='private'
+                        control={<Radio />}
+                        label='Only me'
+                      />
+                      <FormControlLabel
+                        value='shared'
+                        control={<Radio />}
+                        label='Share with...'
+                      />
                     </RadioGroup>
                     {visibility === 'shared' ? (
                       <Autocomplete
                         multiple
-                        options={allUsers.filter((u) => u._id !== currentUser._id)}
+                        options={allUsers.filter(
+                          (u) => u._id !== currentUser._id
+                        )}
                         getOptionLabel={(o) => `${o.first_name} ${o.last_name}`}
                         value={sharedWith}
                         onChange={(e, val) => setSharedWith(val)}
                         renderInput={(params) => (
-                          <TextField {...params} label='Select users' placeholder='Type to search users' />
+                          <TextField
+                            {...params}
+                            label='Select users'
+                            placeholder='Type to search users'
+                          />
                         )}
                         sx={{ mt: 1 }}
                       />
                     ) : null}
                     <FormHelperText>
-                      Public: everyone. Only me: just you. Share with: only selected users.
+                      Public: everyone. Only me: just you. Share with: only
+                      selected users.
                     </FormHelperText>
                   </FormControl>
                 </DialogContent>
@@ -220,7 +280,7 @@ export default function TopBar() {
                 </DialogActions>
               </Dialog>
               <FormControlLabel
-                control={(
+                control={
                   <Switch
                     checked={advancedEnabled}
                     onChange={handleToggle}
@@ -229,32 +289,30 @@ export default function TopBar() {
                       '& .MuiSwitch-switchBase.Mui-checked': {
                         color: '#ffffffff',
                       },
-                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                        backgroundColor: '#ffffffff',
-                      },
+                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+                        {
+                          backgroundColor: '#ffffffff',
+                        },
                     }}
                     inputProps={{ 'aria-label': 'Enable advanced features' }}
                   />
-                )}
+                }
                 label='Advanced'
                 labelPlacement='start'
                 sx={{ color: 'white', fontSize: '0.9rem', mr: 1 }}
               />
-              <button
-                type='button'
+              <Button
+                variant='outlined'
+                size='small'
                 onClick={() => logoutMutation.mutate()}
-                className='logout-btn'
-                style={{
-                  background: 'transparent',
+                sx={{
                   color: 'white',
-                  border: '1px solid rgba(255,255,255,0.6)',
-                  borderRadius: 4,
-                  padding: '6px 10px',
-                  cursor: 'pointer',
+                  borderColor: 'rgba(255,255,255,0.6)',
+                  textTransform: 'none',
                 }}
               >
                 Logout
-              </button>
+              </Button>
             </>
           ) : null}
         </Box>

@@ -55,6 +55,7 @@ export default function UserPhotos() {
         queryKey: queryKeys.photosOfUser(userId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities(5) });
       // Invalidate mentions for any users referenced
       if (data?.mentions?.length) {
         for (const mentionedId of data.mentions) {

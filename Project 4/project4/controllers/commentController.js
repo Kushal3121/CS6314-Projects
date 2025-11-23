@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Photo from '../schema/photo.js';
 import User from '../schema/user.js';
+import { logActivity } from './activityController.js';
 
 export async function addCommentToPhoto(req, res) {
   const { photo_id } = req.params;
@@ -53,6 +54,13 @@ export async function addCommentToPhoto(req, res) {
         },
       }
     );
+    // Log comment added
+    await logActivity({
+      type: 'comment_added',
+      userId,
+      photoId: photo._id,
+      photoFileName: photo.file_name,
+    });
     return res.status(200).json({
       message: 'Comment added',
       mentions: (validMentionIds || []).map((x) => x.toString()),

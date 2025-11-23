@@ -9,6 +9,7 @@ export const queryKeys = {
   commentsOfUser: (userId) => ['commentsOfUser', userId],
   userHighlights: (userId) => ['userHighlights', userId],
   mentionsOfUser: (userId) => ['mentionsOfUser', userId],
+  activities: (limit = 5) => ['activities', limit],
 };
 
 // API Calls
@@ -79,5 +80,12 @@ export const registerRequest = async (payload) => {
 
 export const fetchMentionsOfUser = async (userId) => {
   const { data } = await apiClient.get(`/mentionsOfUser/${userId}`);
+  return data;
+};
+
+export const fetchActivities = async (limit = 5) => {
+  const { data } = await apiClient.get('/activities', {
+    params: { limit },
+  });
   return data;
 };
