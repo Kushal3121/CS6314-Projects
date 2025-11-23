@@ -28,6 +28,8 @@ const photoSchema = new mongoose.Schema({
   user_id: mongoose.Schema.Types.ObjectId,
   // Array of comment objects representing the comments made on this photo.
   comments: [commentSchema],
+  // Optional sharing list: if undefined => public; [] => owner only; [ids] => restricted
+  shared_with: [mongoose.Schema.Types.ObjectId],
 });
 
 /**

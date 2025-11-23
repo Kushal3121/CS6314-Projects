@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -7,11 +7,24 @@ import {
   FormControlLabel,
   Box,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  RadioGroup,
+  Radio,
+  FormControl,
+  FormLabel,
+  FormHelperText,
+  FormGroup,
+  FormControlLabel as MuiFormControlLabel,
+  Autocomplete,
+  TextField,
 } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import './styles.css';
-import { fetchUserById, logoutRequest, uploadPhoto, queryKeys } from '../../api/index.js';
+import { fetchUserById, fetchUsers, logoutRequest, uploadPhoto, queryKeys } from '../../api/index.js';
 import useAppStore from '../../store/useAppStore.js';
 
 /**
@@ -28,6 +41,15 @@ export default function TopBar() {
   const currentUser = useAppStore((s) => s.currentUser);
   const clearCurrentUser = useAppStore((s) => s.clearCurrentUser);
   const queryClient = useQueryClient();
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [visibility, setVisibility] = useState('public'); // public | private | shared
+  const [sharedWith, setSharedWith] = useState([]);
+  const { data: allUsers = [] } = useQuery({
+    queryKey: queryKeys.users,
+    queryFn: fetchUsers,
+    enabled: Boolean(currentUser),
+  });
 
   const { pathPrefix, userId } = useMemo(() => {
     const path = location.pathname;
@@ -80,22 +102,38 @@ export default function TopBar() {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: (file) => uploadPhoto(file),
+    mutationFn: ({ file, sharedWithIds }) => uploadPhoto(file, { sharedWith: sharedWithIds }),
     onSuccess: () => {
       if (currentUser?._id) {
         queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(currentUser._id) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
         navigate(`/photos/${currentUser._id}`);
       }
     },
   });
 
-  const handleChooseFile = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      uploadMutation.mutate(file);
-      // reset so same file can be selected again
-      e.target.value = '';
+  const startUploadFlow = () => {
+    setSelectedFile(null);
+    setVisibility('public');
+    setSharedWith([]);
+    setUploadOpen(true);
+  };
+
+  const handleSelectFile = (e) => {
+    const file = e.target.files?.[0] || null;
+    setSelectedFile(file);
+  };
+
+  const handleConfirmUpload = () => {
+    if (!selectedFile) return;
+    let sharedWithIds;
+    if (visibility === 'private') {
+      sharedWithIds = []; // owner only
+    } else if (visibility === 'shared') {
+      sharedWithIds = sharedWith.map((u) => u._id);
     }
+    uploadMutation.mutate({ file: selectedFile, sharedWithIds });
+    setUploadOpen(false);
   };
 
   return (
@@ -115,23 +153,72 @@ export default function TopBar() {
         <Box className='topbar-toggle'>
           {currentUser ? (
             <>
-              <input
-                id='file-input'
-                type='file'
-                accept='image/*'
-                style={{ display: 'none' }}
-                onChange={handleChooseFile}
-              />
               <Button
-                component='label'
-                htmlFor='file-input'
                 variant='outlined'
                 size='small'
                 sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.6)', mr: 1 }}
                 disabled={uploadMutation.isPending}
+                onClick={startUploadFlow}
               >
                 {uploadMutation.isPending ? 'Uploading...' : 'Add Photo'}
               </Button>
+              <Dialog open={uploadOpen} onClose={() => setUploadOpen(false)} maxWidth='sm' fullWidth>
+                <DialogTitle>Upload Photo</DialogTitle>
+                <DialogContent dividers>
+                  <Box sx={{ my: 1 }}>
+                    <Button variant='outlined' component='label'>
+                      {selectedFile ? 'Change File' : 'Choose File'}
+                      <input
+                        type='file'
+                        accept='image/*'
+                        hidden
+                        onChange={handleSelectFile}
+                      />
+                    </Button>
+                    <Typography variant='caption' sx={{ ml: 1 }}>
+                      {selectedFile ? selectedFile.name : 'No file selected'}
+                    </Typography>
+                  </Box>
+                  <FormControl component='fieldset' sx={{ mt: 1 }}>
+                    <FormLabel component='legend'>Visibility</FormLabel>
+                    <RadioGroup
+                      row
+                      value={visibility}
+                      onChange={(e) => setVisibility(e.target.value)}
+                    >
+                      <FormControlLabel value='public' control={<Radio />} label='Public' />
+                      <FormControlLabel value='private' control={<Radio />} label='Only me' />
+                      <FormControlLabel value='shared' control={<Radio />} label='Share with...' />
+                    </RadioGroup>
+                    {visibility === 'shared' ? (
+                      <Autocomplete
+                        multiple
+                        options={allUsers.filter((u) => u._id !== currentUser._id)}
+                        getOptionLabel={(o) => `${o.first_name} ${o.last_name}`}
+                        value={sharedWith}
+                        onChange={(e, val) => setSharedWith(val)}
+                        renderInput={(params) => (
+                          <TextField {...params} label='Select users' placeholder='Type to search users' />
+                        )}
+                        sx={{ mt: 1 }}
+                      />
+                    ) : null}
+                    <FormHelperText>
+                      Public: everyone. Only me: just you. Share with: only selected users.
+                    </FormHelperText>
+                  </FormControl>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setUploadOpen(false)}>Cancel</Button>
+                  <Button
+                    variant='contained'
+                    onClick={handleConfirmUpload}
+                    disabled={!selectedFile || uploadMutation.isPending}
+                  >
+                    Upload
+                  </Button>
+                </DialogActions>
+              </Dialog>
               <FormControlLabel
                 control={(
                   <Switch

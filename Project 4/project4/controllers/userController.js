@@ -103,7 +103,21 @@ export async function getUserById(req, res) {
 export async function getCounts(req, res) {
   try {
     const users = await User.find({}, '_id first_name last_name').lean();
-    const photos = await Photo.find({}).lean();
+    const viewerId = req.session?.user?._id?.toString?.();
+    let photos;
+    if (viewerId) {
+      const viewerObj = new mongoose.Types.ObjectId(viewerId);
+      photos = await Photo.find({
+        $or: [
+          { user_id: viewerObj }, // own photos always visible
+          { shared_with: { $exists: false } }, // public
+          { shared_with: { $in: [viewerObj] } }, // shared with viewer
+        ],
+      }).lean();
+    } else {
+      // Fallback (should not happen due to auth guard)
+      photos = await Photo.find({ shared_with: { $exists: false } }).lean();
+    }
 
     const counts = users.map((u) => ({
       _id: u._id.toString(),

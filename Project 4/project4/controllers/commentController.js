@@ -57,9 +57,21 @@ export async function addCommentToPhoto(req, res) {
 export async function getCommentsOfUser(req, res) {
   const { id } = req.params;
   try {
-    const photos = await Photo.find({
+    const viewerId = req.session?.user?._id?.toString?.();
+    const viewerObj = viewerId ? new mongoose.Types.ObjectId(viewerId) : null;
+    const base = {
       'comments.user_id': { $in: [id, new mongoose.Types.ObjectId(id)] },
-    })
+    };
+    const visibility = viewerObj
+      ? {
+          $or: [
+            { user_id: viewerObj },
+            { shared_with: { $exists: false } },
+            { shared_with: { $in: [viewerObj] } },
+          ],
+        }
+      : { shared_with: { $exists: false } };
+    const photos = await Photo.find({ $and: [base, visibility] })
       .select('_id user_id file_name comments')
       .lean();
 
@@ -92,10 +104,22 @@ export async function getMentionsOfUser(req, res) {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid user id' });
     }
-    // Find photos where any comment mentions this user
-    const photos = await Photo.find({
+    const viewerId = req.session?.user?._id?.toString?.();
+    const viewerObj = viewerId ? new mongoose.Types.ObjectId(viewerId) : null;
+    // Find photos where any comment mentions this user and are visible to viewer
+    const base = {
       'comments.mentions': { $in: [id, new mongoose.Types.ObjectId(id)] },
-    })
+    };
+    const visibility = viewerObj
+      ? {
+          $or: [
+            { user_id: viewerObj },
+            { shared_with: { $exists: false } },
+            { shared_with: { $in: [viewerObj] } },
+          ],
+        }
+      : { shared_with: { $exists: false } };
+    const photos = await Photo.find({ $and: [base, visibility] })
       .select('_id user_id file_name')
       .lean();
 

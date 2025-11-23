@@ -61,10 +61,13 @@ export const logoutRequest = async () => {
   return data;
 };
 
-export const uploadPhoto = async (file) => {
+export const uploadPhoto = async (file, options = {}) => {
   const form = new FormData();
   // Server (and tests) expect field name 'uploadedphoto'
   form.append('uploadedphoto', file);
+  if (Array.isArray(options.sharedWith)) {
+    form.append('shared_with', JSON.stringify(options.sharedWith));
+  }
   const { data } = await apiClient.post('/photos/new', form);
   return data;
 };
