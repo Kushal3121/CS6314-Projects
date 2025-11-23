@@ -8,6 +8,7 @@ export const queryKeys = {
   photosOfUser: (userId) => ['photosOfUser', userId],
   commentsOfUser: (userId) => ['commentsOfUser', userId],
   userHighlights: (userId) => ['userHighlights', userId],
+  mentionsOfUser: (userId) => ['mentionsOfUser', userId],
 };
 
 // API Calls
@@ -70,5 +71,10 @@ export const uploadPhoto = async (file) => {
 
 export const registerRequest = async (payload) => {
   const { data } = await apiClient.post('/user', payload);
+  return data;
+};
+
+export const fetchMentionsOfUser = async (userId) => {
+  const { data } = await apiClient.get(`/mentionsOfUser/${userId}`);
   return data;
 };

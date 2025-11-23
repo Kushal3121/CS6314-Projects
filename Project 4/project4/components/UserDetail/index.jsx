@@ -14,6 +14,7 @@ import './styles.css';
 import {
   fetchUserById,
   fetchUserHighlights,
+  fetchMentionsOfUser,
   queryKeys,
 } from '../../api/index.js';
 
@@ -31,6 +32,10 @@ export default function UserDetail() {
   const { data: highlights } = useQuery({
     queryKey: queryKeys.userHighlights(userId),
     queryFn: () => fetchUserHighlights(userId),
+  });
+  const { data: mentions = [] } = useQuery({
+    queryKey: queryKeys.mentionsOfUser(userId),
+    queryFn: () => fetchMentionsOfUser(userId),
   });
 
   if (isLoading || !user) {
@@ -144,6 +149,52 @@ export default function UserDetail() {
               </Box>
             </Button>
           </Stack>
+        </Box>
+
+        {/* Mentions section */}
+        <Box className='mentions-section'>
+          <Typography variant='subtitle1' className='mentions-title'>
+            Mentions
+          </Typography>
+          {mentions.length ? (
+            <Stack spacing={1.2} className='mentions-list'>
+              {mentions.map((m) => (
+                <Stack
+                  key={`${m.photo_id}`}
+                  direction='row'
+                  spacing={1.2}
+                  alignItems='center'
+                  className='mention-item'
+                >
+                  <Button
+                    variant='text'
+                    className='mention-thumb-btn'
+                    component={Link}
+                    to={`/photos/${m.owner_id}/${m.photo_id}`}
+                  >
+                    <img
+                      src={`/images/${m.file_name}`}
+                      alt='mention'
+                      className='mention-thumb'
+                    />
+                  </Button>
+                  <Typography variant='body2' className='mention-owner'>
+                    Mentioned in a photo by{' '}
+                    <Link
+                      to={`/users/${m.owner_id}`}
+                      className='mention-owner-link'
+                    >
+                      {m.owner_first_name} {m.owner_last_name}
+                    </Link>
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
+          ) : (
+            <Typography variant='body2' className='mentions-empty'>
+              No mentions yet.
+            </Typography>
+          )}
         </Box>
 
         <Button

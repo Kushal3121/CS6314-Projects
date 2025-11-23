@@ -160,3 +160,45 @@
 .usage-sub {
   color: #555;
 }
+
+/* Mentions section */
+.mentions-section {
+  margin: 12px 0 16px;
+}
+.mentions-title {
+  font-weight: 600;
+  color: #0d47a1;
+  margin-bottom: 8px;
+}
+.mention-item {
+  background: #ffffff;
+  border: 1px solid #e5eef9;
+  border-radius: 10px;
+  padding: 6px 8px;
+}
+.mention-thumb-btn {
+  padding: 0 !important;
+  min-width: 0 !important;
+  border-radius: 8px !important;
+}
+.mention-thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e6e6e6;
+}
+.mention-owner {
+  color: #333;
+}
+.mention-owner-link {
+  color: #1976d2;
+  text-decoration: none;
+  font-weight: 600;
+}
+.mention-owner-link:hover {
+  text-decoration: underline;
+}
+.mentions-empty {
+  color: #666;
+}

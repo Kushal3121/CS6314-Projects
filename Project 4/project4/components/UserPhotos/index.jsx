@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -9,11 +9,16 @@ import {
   Stack,
   Avatar,
   Divider,
-  TextField,
 } from '@mui/material';
 import './styles.css';
 import useAppStore from '../../store/useAppStore.js';
-import { fetchPhotosOfUser, postComment, queryKeys } from '../../api/index.js';
+import {
+  fetchPhotosOfUser,
+  fetchUsers,
+  postComment,
+  queryKeys,
+} from '../../api/index.js';
+import { MentionsInput, Mention } from 'react-mentions';
 
 export default function UserPhotos() {
   const { userId, photoId } = useParams();
@@ -28,6 +33,18 @@ export default function UserPhotos() {
   const queryClient = useQueryClient();
   const setTextFor = (photoKey, text) =>
     setNewComments((prev) => ({ ...prev, [photoKey]: text }));
+  const { data: users = [] } = useQuery({
+    queryKey: queryKeys.users,
+    queryFn: fetchUsers,
+  });
+  const mentionData = useMemo(
+    () =>
+      users.map((u) => ({
+        id: u._id,
+        display: `${u.first_name} ${u.last_name}`,
+      })),
+    [users]
+  );
 
   const addCommentMutation = useMutation({
     mutationFn: ({ photoId: targetPhotoId, comment }) =>
@@ -132,13 +149,41 @@ export default function UserPhotos() {
             ))}
             <Box sx={{ mt: 1.5 }}>
               <Stack direction='row' spacing={1}>
-                <TextField
-                  size='small'
-                  fullWidth
-                  placeholder='Add a comment...'
-                  value={newComments[p._id] || ''}
-                  onChange={(e) => setTextFor(p._id, e.target.value)}
-                />
+                <Box sx={{ flex: 1 }}>
+                  <MentionsInput
+                    value={newComments[p._id] || ''}
+                    onChange={(e) => setTextFor(p._id, e.target.value)}
+                    placeholder='Add a comment... Use @ to mention'
+                    style={{
+                      control: {
+                        fontSize: 14,
+                        minHeight: 38,
+                        border: '1px solid #ccc',
+                        borderRadius: 4,
+                      },
+                      input: { padding: 8 },
+                      highlighter: { padding: 8 },
+                      suggestions: {
+                        list: {
+                          backgroundColor: 'white',
+                          border: '1px solid rgba(0,0,0,0.15)',
+                          borderRadius: 6,
+                        },
+                        item: {
+                          padding: '5px 10px',
+                          borderBottom: '1px solid #eee',
+                        },
+                      },
+                    }}
+                  >
+                    <Mention
+                      trigger='@'
+                      data={mentionData}
+                      markup='@[__display__](__id__)'
+                      displayTransform={(id, display) => `@${display}`}
+                    />
+                  </MentionsInput>
+                </Box>
                 <Button
                   variant='contained'
                   disabled={
@@ -344,13 +389,41 @@ export default function UserPhotos() {
           </Box>
           <Box sx={{ mt: 1 }}>
             <Stack direction='row' spacing={1}>
-              <TextField
-                size='small'
-                fullWidth
-                placeholder='Add a comment...'
-                value={newComments[photo._id] || ''}
-                onChange={(e) => setTextFor(photo._id, e.target.value)}
-              />
+              <Box sx={{ flex: 1 }}>
+                <MentionsInput
+                  value={newComments[photo._id] || ''}
+                  onChange={(e) => setTextFor(photo._id, e.target.value)}
+                  placeholder='Add a comment... Use @ to mention'
+                  style={{
+                    control: {
+                      fontSize: 14,
+                      minHeight: 38,
+                      border: '1px solid #ccc',
+                      borderRadius: 4,
+                    },
+                    input: { padding: 8 },
+                    highlighter: { padding: 8 },
+                    suggestions: {
+                      list: {
+                        backgroundColor: 'white',
+                        border: '1px solid rgba(0,0,0,0.15)',
+                        borderRadius: 6,
+                      },
+                      item: {
+                        padding: '5px 10px',
+                        borderBottom: '1px solid #eee',
+                      },
+                    },
+                  }}
+                >
+                  <Mention
+                    trigger='@'
+                    data={mentionData}
+                    markup='@[__display__](__id__)'
+                    displayTransform={(id, display) => `@${display}`}
+                  />
+                </MentionsInput>
+              </Box>
               <Button
                 variant='contained'
                 disabled={

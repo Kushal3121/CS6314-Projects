@@ -26,6 +26,7 @@ import {
 import {
   addCommentToPhoto as addCommentToPhotoHandler,
   getCommentsOfUser as getCommentsOfUserHandler,
+  getMentionsOfUser as getMentionsOfUserHandler,
 } from './controllers/commentController.js';
 
 import User from './schema/user.js';
@@ -156,6 +157,9 @@ app.get('/photosOfUser/:id', getPhotosOfUserHandler);
 
 // Return all comments authored by a user (with thumbnails)
 app.get('/commentsOfUser/:id', getCommentsOfUserHandler);
+
+// Return all photos where the user is @mentioned
+app.get('/mentionsOfUser/:id', getMentionsOfUserHandler);
 
 /* ---------- START SERVER ---------- */
 const server = app.listen(portno, () => {
