@@ -13,7 +13,7 @@ export async function addCommentToPhoto(req, res) {
     if (!mongoose.Types.ObjectId.isValid(photo_id)) {
       return res.status(400).json({ message: 'Invalid photo id' });
     }
-    const photo = await Photo.findById(photo_id);
+    const photo = await Photo.findById(photo_id).lean();
     if (!photo) {
       return res.status(404).json({ message: 'Photo not found' });
     }
@@ -39,14 +39,24 @@ export async function addCommentToPhoto(req, res) {
       /\@\[([^\]]+)\]\(([^\)]+)\)/g,
       '@$1'
     );
-    photo.comments.push({
-      comment: displayText,
-      date_time: new Date(),
-      user_id: userId,
-      mentions: validMentionIds,
+    // Atomically push comment to avoid mutating other fields
+    await Photo.updateOne(
+      { _id: photo_id },
+      {
+        $push: {
+          comments: {
+            comment: displayText,
+            date_time: new Date(),
+            user_id: new mongoose.Types.ObjectId(userId),
+            mentions: validMentionIds,
+          },
+        },
+      }
+    );
+    return res.status(200).json({
+      message: 'Comment added',
+      mentions: (validMentionIds || []).map((x) => x.toString()),
     });
-    await photo.save();
-    return res.status(200).json({ message: 'Comment added' });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Error in POST /commentsOfPhoto/:photo_id', err);

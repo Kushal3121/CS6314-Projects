@@ -49,12 +49,20 @@ export default function UserPhotos() {
   const addCommentMutation = useMutation({
     mutationFn: ({ photoId: targetPhotoId, comment }) =>
       postComment({ photoId: targetPhotoId, comment }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       // refresh photos cache so new comment appears
       queryClient.invalidateQueries({
         queryKey: queryKeys.photosOfUser(userId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
+      // Invalidate mentions for any users referenced
+      if (data?.mentions?.length) {
+        for (const mentionedId of data.mentions) {
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.mentionsOfUser(mentionedId),
+          });
+        }
+      }
     },
   });
 

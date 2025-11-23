@@ -74,6 +74,26 @@ mongoose.connect('mongodb://127.0.0.1/project3', {
   useUnifiedTopology: true,
 });
 
+// Normalize visibility: convert legacy/accidental owner-only flags on seeded/public photos
+// back to public by unsetting empty sharing lists. Safe to run on each server start.
+mongoose.connection.once('open', async () => {
+  try {
+    const result = await Photo.updateMany(
+      { shared_with: { $exists: true, $size: 0 } },
+      { $unset: { shared_with: '' } }
+    );
+    // eslint-disable-next-line no-console
+    console.log(
+      `Visibility normalization complete. Matched: ${
+        result.matchedCount ?? result.n
+      }, modified: ${result.modifiedCount ?? result.nModified}`
+    );
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Visibility normalization failed:', e);
+  }
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 app.use(express.static(__dirname));

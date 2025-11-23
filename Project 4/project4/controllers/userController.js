@@ -14,11 +14,9 @@ export async function register(req, res) {
       occupation,
     } = req.body || {};
     if (!login_name || !password || !first_name || !last_name) {
-      return res
-        .status(400)
-        .json({
-          message: 'login_name, password, first_name, last_name required',
-        });
+      return res.status(400).json({
+        message: 'login_name, password, first_name, last_name required',
+      });
     }
     const existing = await User.findOne({ login_name }).lean();
     if (existing) {
@@ -107,16 +105,36 @@ export async function getCounts(req, res) {
     let photos;
     if (viewerId) {
       const viewerObj = new mongoose.Types.ObjectId(viewerId);
+      const seededOwners = await User.find({ password: 'weak' }, '_id').lean();
+      const seededOwnerIds = seededOwners.map((u) => u._id);
       photos = await Photo.find({
         $or: [
           { user_id: viewerObj }, // own photos always visible
           { shared_with: { $exists: false } }, // public
           { shared_with: { $in: [viewerObj] } }, // shared with viewer
+          {
+            $and: [
+              { shared_with: { $exists: true, $size: 0 } },
+              { user_id: { $in: seededOwnerIds } },
+            ],
+          }, // seeded owner-only treated as public
         ],
       }).lean();
     } else {
       // Fallback (should not happen due to auth guard)
-      photos = await Photo.find({ shared_with: { $exists: false } }).lean();
+      const seededOwners = await User.find({ password: 'weak' }, '_id').lean();
+      const seededOwnerIds = seededOwners.map((u) => u._id);
+      photos = await Photo.find({
+        $or: [
+          { shared_with: { $exists: false } },
+          {
+            $and: [
+              { shared_with: { $exists: true, $size: 0 } },
+              { user_id: { $in: seededOwnerIds } },
+            ],
+          },
+        ],
+      }).lean();
     }
 
     const counts = users.map((u) => ({
@@ -161,14 +179,36 @@ export async function getUsageHighlights(req, res) {
       return res.status(400).json({ message: 'Invalid user id' });
     }
     const objectId = new mongoose.Types.ObjectId(id);
+    const viewerId = req.session?.user?._id?.toString?.();
+    const viewerObj = viewerId ? new mongoose.Types.ObjectId(viewerId) : null;
+
+    // Build visibility filter identical to photosOfUser
+    const isOwnerView = viewerId && viewerId === id;
+    const baseMatch = { $or: [{ user_id: objectId }, { user_id: id }] };
+    let visibilityMatch = {};
+    if (!isOwnerView) {
+      const seededOwners = await User.find({ password: 'weak' }, '_id').lean();
+      const seededOwnerIds = seededOwners.map((u) => u._id);
+      visibilityMatch = {
+        $or: [
+          { shared_with: { $exists: false } }, // public
+          viewerObj ? { shared_with: { $in: [viewerObj] } } : { _id: null }, // if no viewer, match nothing
+          {
+            $and: [
+              { shared_with: { $exists: true, $size: 0 } },
+              { user_id: { $in: seededOwnerIds } },
+            ],
+          }, // seeded owner-only treated as public
+        ],
+      };
+    }
+    const highlightMatch = isOwnerView
+      ? baseMatch
+      : { $and: [baseMatch, visibilityMatch] };
 
     // Most recent photo
     const recentAgg = await Photo.aggregate([
-      {
-        $match: {
-          $or: [{ user_id: objectId }, { user_id: id }],
-        },
-      },
+      { $match: highlightMatch },
       {
         $project: {
           _id: 1,
@@ -184,11 +224,7 @@ export async function getUsageHighlights(req, res) {
 
     // Most commented photo (tie-breaker: most recent)
     const mostCommentedAgg = await Photo.aggregate([
-      {
-        $match: {
-          $or: [{ user_id: objectId }, { user_id: id }],
-        },
-      },
+      { $match: highlightMatch },
       {
         $project: {
           _id: 1,

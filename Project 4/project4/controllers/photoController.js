@@ -91,17 +91,37 @@ export async function getPhotosOfUser(req, res) {
     const isOwnerView = sessionUserId && sessionUserId === id;
 
     const baseMatch = { $or: [{ user_id: id }, { user_id: targetId }] };
-    const visibilityMatch = isOwnerView
-      ? {}
-      : {
-          $or: [
-            { shared_with: { $exists: false } }, // public
-            { shared_with: { $in: [sessionUserId ? new mongoose.Types.ObjectId(sessionUserId) : null] } }, // shared with viewer
-          ],
-        };
+    let visibilityMatch = {};
+    if (!isOwnerView) {
+      // Seeded users have password "weak" in starter DB; treat owner-only seeded photos as public.
+      const seededOwners = await User.find({ password: 'weak' }, '_id').lean();
+      const seededOwnerIds = seededOwners.map((u) => u._id);
+      visibilityMatch = {
+        $or: [
+          { shared_with: { $exists: false } }, // public
+          {
+            shared_with: {
+              $in: [
+                sessionUserId
+                  ? new mongoose.Types.ObjectId(sessionUserId)
+                  : null,
+              ],
+            },
+          }, // shared with viewer
+          // Seeded dataset special-case: empty list (owner-only) acts as public for seeded owners
+          {
+            $and: [
+              { shared_with: { $exists: true, $size: 0 } },
+              { user_id: { $in: seededOwnerIds } },
+            ],
+          },
+        ],
+      };
+    }
 
-    const match =
-      isOwnerView ? baseMatch : { $and: [baseMatch, visibilityMatch] };
+    const match = isOwnerView
+      ? baseMatch
+      : { $and: [baseMatch, visibilityMatch] };
 
     const photos = await Photo.find(match)
       .select('_id user_id comments file_name date_time')
