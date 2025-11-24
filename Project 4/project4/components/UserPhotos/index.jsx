@@ -30,181 +30,6 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import ConfirmDialog from '../Common/ConfirmDialog.jsx';
-import { addPhotoTag } from '../../api/index.js';
-import { Autocomplete, TextField } from '@mui/material';
-
-function TaggingOverlay({ photo, userId }) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { data: users = [] } = useQuery({
-    queryKey: queryKeys.users,
-    queryFn: fetchUsers,
-  });
-  const [selecting, setSelecting] = useState(false);
-  const [start, setStart] = useState(null); // {x,y} in px within overlay
-  const [current, setCurrent] = useState(null); // {x,y} in px within overlay
-  const [overlayRef, setOverlayRef] = useState(null);
-  const [chosenUser, setChosenUser] = useState(null);
-
-  const addTagMutation = useMutation({
-    mutationFn: ({ rect, userId: tagUserId }) =>
-      addPhotoTag({ photoId: photo._id, userId: tagUserId, rect }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
-    },
-  });
-
-  const getOverlaySize = () => {
-    if (!overlayRef) return { width: 1, height: 1, left: 0, top: 0 };
-    const rect = overlayRef.getBoundingClientRect();
-    return { width: rect.width, height: rect.height, left: rect.left, top: rect.top };
-  };
-
-  const onMouseDown = (e) => {
-    if (!overlayRef) return;
-    const { left, top } = getOverlaySize();
-    setSelecting(true);
-    setChosenUser(null);
-    setStart({ x: e.clientX - left, y: e.clientY - top });
-    setCurrent({ x: e.clientX - left, y: e.clientY - top });
-  };
-
-  const onMouseMove = (e) => {
-    if (!selecting || !overlayRef) return;
-    const { left, top, width, height } = getOverlaySize();
-    // clip to overlay bounds
-    const x = Math.max(0, Math.min(width, e.clientX - left));
-    const y = Math.max(0, Math.min(height, e.clientY - top));
-    setCurrent({ x, y });
-  };
-
-  const onMouseUp = () => {
-    setSelecting(false);
-  };
-
-  const clearSelection = () => {
-    setStart(null);
-    setCurrent(null);
-    setChosenUser(null);
-  };
-
-  const selectionRect = () => {
-    if (!start || !current || !overlayRef) return null;
-    const { width, height } = getOverlaySize();
-    const x1 = Math.max(0, Math.min(start.x, current.x));
-    const y1 = Math.max(0, Math.min(start.y, current.y));
-    const x2 = Math.min(width, Math.max(start.x, current.x));
-    const y2 = Math.min(height, Math.max(start.y, current.y));
-    const w = Math.max(0, x2 - x1);
-    const h = Math.max(0, y2 - y1);
-    if (w < 3 || h < 3) return null; // ignore tiny drags
-    return { x: x1, y: y1, w, h, width, height };
-  };
-
-  const submitTag = () => {
-    const sel = selectionRect();
-    if (!sel || !chosenUser) return;
-    const rect = {
-      x: sel.x / sel.width,
-      y: sel.y / sel.height,
-      w: sel.w / sel.width,
-      h: sel.h / sel.height,
-    };
-    addTagMutation.mutate(
-      { rect, userId: chosenUser._id },
-      {
-        onSuccess: () => {
-          clearSelection();
-        },
-      }
-    );
-  };
-
-  return (
-    <>
-      <div
-        className='tagging-overlay'
-        ref={setOverlayRef}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-      >
-        {/* Existing tags */}
-        {(photo.tags || []).map((t) => {
-          const style = {
-            left: `${(t.x || 0) * 100}%`,
-            top: `${(t.y || 0) * 100}%`,
-            width: `${(t.w || 0) * 100}%`,
-            height: `${(t.h || 0) * 100}%`,
-          };
-          const user = t.user;
-          const name = user ? `${user.first_name} ${user.last_name}` : 'Unknown';
-          return (
-            <div key={t._id} className='tag-rect' style={style}>
-              <div className='tag-label'>
-                <a
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (user?._id) navigate(`/users/${user._id}`);
-                  }}
-                  style={{ color: '#fff', textDecoration: 'underline', cursor: 'pointer' }}
-                >
-                  {name}
-                </a>
-              </div>
-            </div>
-          );
-        })}
-        {/* Selection rectangle */}
-        {(() => {
-          const sel = selectionRect();
-          if (!sel) return null;
-          const style = {
-            left: `${(sel.x / sel.width) * 100}%`,
-            top: `${(sel.y / sel.height) * 100}%`,
-            width: `${(sel.w / sel.width) * 100}%`,
-            height: `${(sel.h / sel.height) * 100}%`,
-          };
-          return <div className='selection-rect' style={style} />;
-        })()}
-      </div>
-      {/* Controls for tagging */}
-      {selectionRect() ? (
-        <Stack
-          direction='row'
-          spacing={1}
-          sx={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.9)', p: 1, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
-        >
-          <Autocomplete
-            size='small'
-            sx={{ minWidth: 220 }}
-            options={users}
-            getOptionLabel={(u) => `${u.first_name} ${u.last_name}`}
-            value={chosenUser}
-            onChange={(_, val) => setChosenUser(val)}
-            renderInput={(params) => <TextField {...params} label='Tag user' />}
-          />
-          <Button
-            variant='contained'
-            size='small'
-            disabled={addTagMutation.isPending || !chosenUser}
-            onClick={submitTag}
-          >
-            Tag
-          </Button>
-          <Button
-            variant='outlined'
-            size='small'
-            onClick={clearSelection}
-            disabled={addTagMutation.isPending}
-          >
-            Cancel
-          </Button>
-        </Stack>
-      ) : null}
-    </>
-  );
-}
 
 export default function UserPhotos() {
   const { userId, photoId } = useParams();
@@ -572,7 +397,7 @@ export default function UserPhotos() {
         <Box className='viewer-photo-box'>
           {(currentUser &&
             ((photo.user_id?.toString?.() || photo.user_id) === currentUser._id)) ? (
-            <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 5 }}>
+            <Box sx={{ position: 'absolute', top: 10, right: 10 }}>
               <Button
                 size='small'
                 variant='outlined'
@@ -585,20 +410,11 @@ export default function UserPhotos() {
               </Button>
             </Box>
           ) : null}
-          <Box className='tagging-container'>
-            <img
-              src={`/images/${photo.file_name}`}
-              alt='user upload'
-              className='viewer-photo-fixed'
-              ref={(el) => {
-                if (el) {
-                  // noop; image element referenced by overlay parent sizing
-                }
-              }}
-            />
-            {/* Overlay for existing tags and selection */}
-            <TaggingOverlay photo={photo} userId={userId} />
-          </Box>
+          <img
+            src={`/images/${photo.file_name}`}
+            alt='user upload'
+            className='viewer-photo-fixed'
+          />
 
           {/* Navigation footer */}
           <Box className='viewer-nav-footer'>

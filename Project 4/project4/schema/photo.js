@@ -37,22 +37,6 @@ const photoSchema = new mongoose.Schema({
     type: [mongoose.Schema.Types.ObjectId],
     default: [],
   },
-  // Tags: rectangular regions marking users by relative position
-  // Each tag stores top-left (x,y) and size (w,h) as numbers between 0 and 1
-  // and the tagged user's id.
-  tags: [
-    new mongoose.Schema(
-      {
-        user_id: { type: mongoose.Schema.Types.ObjectId, required: true },
-        x: { type: Number, required: true, min: 0, max: 1 },
-        y: { type: Number, required: true, min: 0, max: 1 },
-        w: { type: Number, required: true, min: 0, max: 1 },
-        h: { type: Number, required: true, min: 0, max: 1 },
-        date_time: { type: Date, default: Date.now },
-      },
-      { _id: true }
-    ),
-  ],
 });
 
 /**

@@ -125,18 +125,6 @@ export const unlikePhoto = async (photoId) => {
   return data;
 };
 
-// Tags
-export const addPhotoTag = async ({ photoId, userId, rect }) => {
-  const { data } = await apiClient.post(`/photos/${photoId}/tags`, {
-    user_id: userId,
-    x: rect.x,
-    y: rect.y,
-    w: rect.w,
-    h: rect.h,
-  });
-  return data;
-};
-
 // Favorites
 export const fetchFavorites = async () => {
   const { data } = await apiClient.get('/favorites');

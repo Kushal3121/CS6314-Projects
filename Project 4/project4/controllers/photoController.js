@@ -134,7 +134,7 @@ export async function getPhotosOfUser(req, res) {
       : { $and: [baseMatch, visibilityMatch] };
 
     const photos = await Photo.find(match)
-      .select('_id user_id comments file_name date_time likes tags')
+      .select('_id user_id comments file_name date_time likes')
       .lean();
 
     // If a user has no photos yet, return an empty array with 200 so clients can
@@ -159,38 +159,6 @@ export async function getPhotosOfUser(req, res) {
         delete comment.user_id;
       });
       await Promise.all(commentPromises);
-      // Populate tag user info
-      const tagUserIds = [
-        ...new Set(
-          (photo.tags || [])
-            .map((t) => t.user_id?.toString?.() || t.user_id)
-            .filter(Boolean)
-        ),
-      ];
-      if (tagUserIds.length) {
-        const tagUsers = await User.find(
-          { _id: { $in: tagUserIds } },
-          '_id first_name last_name'
-        ).lean();
-        const tagUserMap = new Map(tagUsers.map((u) => [u._id.toString(), u]));
-        photo.tags = (photo.tags || []).map((t) => {
-          const key = t.user_id?.toString?.() || t.user_id;
-          const user = tagUserMap.get(key) || null;
-          return {
-            _id: t._id,
-            x: t.x,
-            y: t.y,
-            w: t.w,
-            h: t.h,
-            date_time: t.date_time,
-            user: user
-              ? { _id: user._id, first_name: user.first_name, last_name: user.last_name }
-              : null,
-          };
-        });
-      } else {
-        photo.tags = [];
-      }
       // likes metadata
       const likesArray = photo.likes || [];
       photo.likesCount = Array.isArray(likesArray) ? likesArray.length : 0;
@@ -226,97 +194,6 @@ export async function getPhotosOfUser(req, res) {
   }
 }
 
-/**
- * POST /photos/:photo_id/tags
- * Adds a rectangular user tag to a photo with relative coordinates.
- * Body: { user_id, x, y, w, h }
- */
-export async function addTagToPhoto(req, res) {
-  const { photo_id } = req.params;
-  const { user_id, x, y, w, h } = req.body || {};
-  try {
-    if (!mongoose.Types.ObjectId.isValid(photo_id)) {
-      return res.status(400).json({ message: 'Invalid photo id' });
-    }
-    const viewerId = req.session?.user?._id?.toString?.();
-    if (!viewerId) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-    if (!mongoose.Types.ObjectId.isValid(user_id)) {
-      return res.status(400).json({ message: 'Invalid user to tag' });
-    }
-    const taggedUser = await User.findById(user_id, '_id').lean();
-    if (!taggedUser) {
-      return res.status(404).json({ message: 'Tagged user not found' });
-    }
-    // Validate coordinates: numbers in [0,1], positive size, and clipping handled client-side
-    const nums = [x, y, w, h];
-    if (nums.some((n) => typeof n !== 'number' || Number.isNaN(n))) {
-      return res.status(400).json({ message: 'Invalid coord types' });
-    }
-    const clamp01 = (n) => Math.max(0, Math.min(1, n));
-    const cx = clamp01(x);
-    const cy = clamp01(y);
-    const cw = clamp01(w);
-    const ch = clamp01(h);
-    if (cw <= 0 || ch <= 0) {
-      return res.status(400).json({ message: 'Rectangle must have positive size' });
-    }
-    // Also ensure rect within [0,1] when combined
-    const maxX = Math.min(1, cx + cw);
-    const maxY = Math.min(1, cy + ch);
-    const finalW = maxX - cx;
-    const finalH = maxY - cy;
-    // Ensure photo exists and visible to viewer (reuse earlier rules)
-    const photo = await Photo.findById(photo_id).lean();
-    if (!photo) {
-      return res.status(404).json({ message: 'Photo not found' });
-    }
-    const isOwner = (photo.user_id?.toString?.() || photo.user_id) === viewerId;
-    if (!isOwner) {
-      const seededOwners = await User.find({ password: 'weak' }, '_id').lean();
-      const seededOwnerIds = seededOwners.map((u) => u._id?.toString?.());
-      const isSeededOwnerOwnerOnlyPublic =
-        Array.isArray(photo.shared_with) &&
-        photo.shared_with.length === 0 &&
-        seededOwnerIds.includes(photo.user_id?.toString?.());
-      const isPublic = !Array.isArray(photo.shared_with);
-      const isShared =
-        Array.isArray(photo.shared_with) &&
-        photo.shared_with.map((x) => x?.toString?.()).includes(viewerId);
-      if (!isPublic && !isShared && !isSeededOwnerOwnerOnlyPublic) {
-        return res.status(403).json({ message: 'Forbidden' });
-      }
-    }
-    // Push tag
-    const tag = {
-      user_id: new mongoose.Types.ObjectId(user_id),
-      x: cx,
-      y: cy,
-      w: finalW,
-      h: finalH,
-      date_time: new Date(),
-    };
-    const updated = await Photo.findOneAndUpdate(
-      { _id: photo_id },
-      { $push: { tags: tag } },
-      { new: true, select: '_id tags' }
-    ).lean();
-    const newTag = updated?.tags?.[updated.tags.length - 1];
-    return res.status(200).json({
-      _id: newTag?._id,
-      x: newTag?.x,
-      y: newTag?.y,
-      w: newTag?.w,
-      h: newTag?.h,
-      user_id,
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Error in POST /photos/:photo_id/tags', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-}
 export async function deletePhoto(req, res) {
   const { photo_id } = req.params;
   try {

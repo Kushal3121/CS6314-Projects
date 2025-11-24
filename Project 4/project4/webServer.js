@@ -29,7 +29,6 @@ import {
   deletePhoto as deletePhotoHandler,
   likePhoto as likePhotoHandler,
   unlikePhoto as unlikePhotoHandler,
-  addTagToPhoto as addTagToPhotoHandler,
 } from './controllers/photoController.js';
 import {
   addCommentToPhoto as addCommentToPhotoHandler,
@@ -193,8 +192,6 @@ app.delete('/photos/:photo_id', deletePhotoHandler);
 // Like/unlike a photo
 app.post('/photos/:photo_id/like', likePhotoHandler);
 app.post('/photos/:photo_id/unlike', unlikePhotoHandler);
-// Add a tag to a photo
-app.post('/photos/:photo_id/tags', addTagToPhotoHandler);
 
 // Return all comments authored by a user (with thumbnails)
 app.get('/commentsOfUser/:id', getCommentsOfUserHandler);
