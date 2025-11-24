@@ -20,9 +20,13 @@ import {
   queryKeys,
   deletePhoto as deletePhotoApi,
   deleteComment as deleteCommentApi,
+  likePhoto as likePhotoApi,
+  unlikePhoto as unlikePhotoApi,
 } from '../../api/index.js';
 import { MentionsInput, Mention } from 'react-mentions';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import FavoriteIcon from '@mui/icons-material/Favorite';
 import ConfirmDialog from '../Common/ConfirmDialog.jsx';
 
 export default function UserPhotos() {
@@ -77,6 +81,18 @@ export default function UserPhotos() {
   const [confirmPhotoId, setConfirmPhotoId] = useState(null);
   const [confirmComment, setConfirmComment] = useState(null); // { photoId, commentId }
 
+  const likeMutation = useMutation({
+    mutationFn: (targetPhotoId) => likePhotoApi(targetPhotoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
+    },
+  });
+  const unlikeMutation = useMutation({
+    mutationFn: (targetPhotoId) => unlikePhotoApi(targetPhotoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
+    },
+  });
   const deletePhotoMutation = useMutation({
     mutationFn: (targetPhotoId) => deletePhotoApi(targetPhotoId),
     onSuccess: () => {
@@ -156,19 +172,37 @@ export default function UserPhotos() {
               <Typography variant='caption' className='upload-time' sx={{ m: 0 }}>
                 Uploaded: {new Date(p.date_time).toLocaleString()}
               </Typography>
-              {(currentUser &&
-                ((p.user_id?.toString?.() || p.user_id) === currentUser._id)) ? (
+              <Stack direction='row' spacing={1} alignItems='center'>
                 <Button
                   size='small'
-                  variant='outlined'
-                  color='error'
+                  variant={p.likedByViewer ? 'contained' : 'outlined'}
+                  color={p.likedByViewer ? 'secondary' : 'primary'}
                   sx={{ textTransform: 'none' }}
-                  disabled={deletePhotoMutation.isPending}
-                  onClick={() => setConfirmPhotoId(p._id)}
+                  disabled={likeMutation.isPending || unlikeMutation.isPending}
+                  onClick={() =>
+                    p.likedByViewer ? unlikeMutation.mutate(p._id) : likeMutation.mutate(p._id)
+                  }
+                  startIcon={p.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />}
                 >
-                  Delete Photo
+                  {p.likedByViewer ? 'Unlike' : 'Like'}
                 </Button>
-              ) : null}
+                <Typography variant='body2' sx={{ color: '#555', minWidth: 24, textAlign: 'center' }}>
+                  {p.likesCount || 0}
+                </Typography>
+                {(currentUser &&
+                  ((p.user_id?.toString?.() || p.user_id) === currentUser._id)) ? (
+                  <Button
+                    size='small'
+                    variant='outlined'
+                    color='error'
+                    sx={{ textTransform: 'none' }}
+                    disabled={deletePhotoMutation.isPending}
+                    onClick={() => setConfirmPhotoId(p._id)}
+                  >
+                    Delete Photo
+                  </Button>
+                ) : null}
+              </Stack>
             </Stack>
 
             <Divider sx={{ my: 1 }} />
@@ -357,68 +391,87 @@ export default function UserPhotos() {
 
           {/* Navigation footer */}
           <Box className='viewer-nav-footer'>
-            <Stack
-              direction='row'
-              spacing={2}
-              justifyContent='center'
-              alignItems='center'
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'auto 1fr auto',
+                alignItems: 'center',
+                columnGap: 3,
+                width: '90%',
+                margin: '0 auto',
+              }}
             >
-              <Button
-                variant='outlined'
-                onClick={handlePrev}
-                disabled={currentIndex === 0}
-                sx={{
-                  textTransform: 'none',
-                  borderColor: '#bbb',
-                  color: '#333',
-                  fontWeight: 500,
-                  px: 3,
-                  '&:hover': {
-                    backgroundColor: '#f2f2f2',
-                  },
-                  '&:disabled': {
-                    color: '#999',
-                    borderColor: '#ddd',
-                  },
-                }}
-              >
-                ← Prev
-              </Button>
+              {/* Left: Like + count (no absolute positioning) */}
+              <Stack direction='row' spacing={1} alignItems='center' sx={{ whiteSpace: 'nowrap' }}>
+                <Button
+                  size='small'
+                  variant={photo.likedByViewer ? 'contained' : 'outlined'}
+                  color={photo.likedByViewer ? 'secondary' : 'primary'}
+                  sx={{ textTransform: 'none' }}
+                  disabled={likeMutation.isPending || unlikeMutation.isPending}
+                  onClick={() =>
+                    photo.likedByViewer ? unlikeMutation.mutate(photo._id) : likeMutation.mutate(photo._id)
+                  }
+                  startIcon={photo.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />}
+                >
+                  {photo.likedByViewer ? 'Unlike' : 'Like'}
+                </Button>
+                <Typography variant='body2' sx={{ color: '#555' }}>
+                  {photo.likesCount || 0}
+                </Typography>
+              </Stack>
 
-              <Typography
-                variant='body2'
-                sx={{
-                  color: '#555',
-                  fontWeight: 500,
-                  minWidth: 50,
-                  textAlign: 'center',
-                }}
+              {/* Center: Prev / index / Next */}
+              <Stack
+                direction='row'
+                spacing={2}
+                alignItems='center'
+                justifyContent='center'
+                sx={{ whiteSpace: 'nowrap', justifySelf: 'center' }}
               >
-                {currentIndex + 1} / {photos.length}
-              </Typography>
+                <Button
+                  variant='outlined'
+                  onClick={handlePrev}
+                  disabled={currentIndex === 0}
+                  sx={{
+                    textTransform: 'none',
+                    borderColor: '#bbb',
+                    color: '#333',
+                    fontWeight: 500,
+                    px: 3,
+                    '&:hover': { backgroundColor: '#f2f2f2' },
+                    '&:disabled': { color: '#999', borderColor: '#ddd' },
+                  }}
+                >
+                  ← Prev
+                </Button>
+                <Typography
+                  variant='body2'
+                  sx={{ color: '#555', fontWeight: 500, minWidth: 50, textAlign: 'center' }}
+                >
+                  {currentIndex + 1} / {photos.length}
+                </Typography>
+                <Button
+                  variant='outlined'
+                  onClick={handleNext}
+                  disabled={currentIndex === photos.length - 1}
+                  sx={{
+                    textTransform: 'none',
+                    borderColor: '#bbb',
+                    color: '#333',
+                    fontWeight: 500,
+                    px: 3,
+                    '&:hover': { backgroundColor: '#f2f2f2' },
+                    '&:disabled': { color: '#999', borderColor: '#ddd' },
+                  }}
+                >
+                  Next →
+                </Button>
+              </Stack>
 
-              <Button
-                variant='outlined'
-                onClick={handleNext}
-                disabled={currentIndex === photos.length - 1}
-                sx={{
-                  textTransform: 'none',
-                  borderColor: '#bbb',
-                  color: '#333',
-                  fontWeight: 500,
-                  px: 3,
-                  '&:hover': {
-                    backgroundColor: '#f2f2f2',
-                  },
-                  '&:disabled': {
-                    color: '#999',
-                    borderColor: '#ddd',
-                  },
-                }}
-              >
-                Next →
-              </Button>
-            </Stack>
+              {/* Right spacer to balance layout */}
+              <Box />
+            </Box>
           </Box>
         </Box>
 

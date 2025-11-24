@@ -24,6 +24,8 @@ import {
   uploadPhoto as uploadPhotoHandler,
   getPhotosOfUser as getPhotosOfUserHandler,
   deletePhoto as deletePhotoHandler,
+  likePhoto as likePhotoHandler,
+  unlikePhoto as unlikePhotoHandler,
 } from './controllers/photoController.js';
 import {
   addCommentToPhoto as addCommentToPhotoHandler,
@@ -184,6 +186,9 @@ app.get('/user/:id/highlights', getUsageHighlights);
 app.get('/photosOfUser/:id', getPhotosOfUserHandler);
 // Delete a photo (owner-only)
 app.delete('/photos/:photo_id', deletePhotoHandler);
+// Like/unlike a photo
+app.post('/photos/:photo_id/like', likePhotoHandler);
+app.post('/photos/:photo_id/unlike', unlikePhotoHandler);
 
 // Return all comments authored by a user (with thumbnails)
 app.get('/commentsOfUser/:id', getCommentsOfUserHandler);

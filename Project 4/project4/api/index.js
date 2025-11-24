@@ -107,3 +107,13 @@ export const deleteUserAccount = async (userId) => {
   const { data } = await apiClient.delete(`/user/${userId}`);
   return data;
 };
+
+export const likePhoto = async (photoId) => {
+  const { data } = await apiClient.post(`/photos/${photoId}/like`, {});
+  return data;
+};
+
+export const unlikePhoto = async (photoId) => {
+  const { data } = await apiClient.post(`/photos/${photoId}/unlike`, {});
+  return data;
+};
