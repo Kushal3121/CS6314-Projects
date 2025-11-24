@@ -12,6 +12,11 @@ const userSchema = new mongoose.Schema({
   occupation: String,
   login_name: String,
   password: String,
+  // list of favorited photo ids for this user
+  favorites: {
+    type: [mongoose.Schema.Types.ObjectId],
+    default: [],
+  },
 });
 
 /**

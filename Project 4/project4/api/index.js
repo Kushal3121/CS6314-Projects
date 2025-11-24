@@ -10,6 +10,7 @@ export const queryKeys = {
   userHighlights: (userId) => ['userHighlights', userId],
   mentionsOfUser: (userId) => ['mentionsOfUser', userId],
   activities: (limit = 5) => ['activities', limit],
+  favorites: ['favorites'],
 };
 
 // API Calls
@@ -115,5 +116,21 @@ export const likePhoto = async (photoId) => {
 
 export const unlikePhoto = async (photoId) => {
   const { data } = await apiClient.post(`/photos/${photoId}/unlike`, {});
+  return data;
+};
+
+// Favorites
+export const fetchFavorites = async () => {
+  const { data } = await apiClient.get('/favorites');
+  return data;
+};
+
+export const favoritePhoto = async (photoId) => {
+  const { data } = await apiClient.post(`/favorites/${photoId}`, {});
+  return data;
+};
+
+export const unfavoritePhoto = async (photoId) => {
+  const { data } = await apiClient.delete(`/favorites/${photoId}`);
   return data;
 };

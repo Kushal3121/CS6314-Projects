@@ -143,6 +143,11 @@ export async function getPhotosOfUser(req, res) {
       return res.status(200).json([]);
     }
 
+    const me = sessionUserId
+      ? await User.findById(sessionUserId, 'favorites').lean()
+      : null;
+    const favIds = (me?.favorites || []).map((x) => x?.toString?.() || x) || [];
+
     const populationPromises = photos.map(async (photo) => {
       const commentPromises = (photo.comments || []).map(async (comment) => {
         const commenterId = comment.user_id?.toString?.() || comment.user_id;
@@ -164,6 +169,10 @@ export async function getPhotosOfUser(req, res) {
       } else {
         photo.likedByViewer = false;
       }
+      // favorite metadata
+      photo.favoritedByViewer = favIds.includes(
+        photo._id?.toString?.() || photo._id
+      );
       delete photo.likes;
     });
     await Promise.all(populationPromises);

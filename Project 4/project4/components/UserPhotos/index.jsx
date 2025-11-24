@@ -22,6 +22,8 @@ import {
   deleteComment as deleteCommentApi,
   likePhoto as likePhotoApi,
   unlikePhoto as unlikePhotoApi,
+  favoritePhoto as favoritePhotoApi,
+  unfavoritePhoto as unfavoritePhotoApi,
 } from '../../api/index.js';
 import { MentionsInput, Mention } from 'react-mentions';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -116,6 +118,21 @@ export default function UserPhotos() {
     },
   });
 
+  const favoriteMutation = useMutation({
+    mutationFn: (photoId) => favoritePhotoApi(photoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites });
+    },
+  });
+  const unfavoriteMutation = useMutation({
+    mutationFn: (photoId) => unfavoritePhotoApi(photoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites });
+    },
+  });
+
   // Handle photo navigation
   useEffect(() => {
     if (!photos.length) {
@@ -189,6 +206,16 @@ export default function UserPhotos() {
                 <Typography variant='body2' sx={{ color: '#555', minWidth: 24, textAlign: 'center' }}>
                   {p.likesCount || 0}
                 </Typography>
+                <Button
+                  size='small'
+                  variant={p.favoritedByViewer ? 'contained' : 'outlined'}
+                  color={p.favoritedByViewer ? 'success' : 'inherit'}
+                  sx={{ textTransform: 'none' }}
+                  disabled={favoriteMutation.isPending || p.favoritedByViewer}
+                  onClick={() => favoriteMutation.mutate(p._id)}
+                >
+                  {p.favoritedByViewer ? 'Favorited' : 'Favorite'}
+                </Button>
                 {(currentUser &&
                   ((p.user_id?.toString?.() || p.user_id) === currentUser._id)) ? (
                   <Button
@@ -419,6 +446,16 @@ export default function UserPhotos() {
                 <Typography variant='body2' sx={{ color: '#555' }}>
                   {photo.likesCount || 0}
                 </Typography>
+                <Button
+                  size='small'
+                  variant={photo.favoritedByViewer ? 'contained' : 'outlined'}
+                  color={photo.favoritedByViewer ? 'success' : 'inherit'}
+                  sx={{ textTransform: 'none' }}
+                  disabled={favoriteMutation.isPending || photo.favoritedByViewer}
+                  onClick={() => favoriteMutation.mutate(photo._id)}
+                >
+                  {photo.favoritedByViewer ? 'Favorited' : 'Favorite'}
+                </Button>
               </Stack>
 
               {/* Center: Prev / index / Next */}

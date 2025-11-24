@@ -11,6 +11,7 @@ import UserPhotos from './components/UserPhotos/index.jsx';
 import UserComments from './components/UserComments/index.jsx';
 import LoginRegister from './components/LoginRegister/index.jsx';
 import Activities from './components/Activities/index.jsx';
+import Favorites from './components/Favorites/index.jsx';
 import useAppStore from './store/useAppStore.js';
 
 // React Query client
@@ -83,6 +84,7 @@ function MainContentRoutes() {
       {/* photos list + optional specific photo */}
       <Route path='/photos/:userId' element={<UserPhotosRoute />} />
       <Route path='/photos/:userId/:photoId' element={<UserPhotosRoute />} />
+      <Route path='/favorites' element={<Favorites />} />
       <Route path='/activities' element={<Activities />} />
       <Route path='/users' element={<UserList />} />
       <Route path='*' element={<UserList />} />

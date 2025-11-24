@@ -55,6 +55,117 @@ export async function register(req, res) {
   }
 }
 
+/**
+ * GET /favorites
+ * Returns the current user's favorited photos (visible ones), newest first.
+ */
+export async function getFavorites(req, res) {
+  try {
+    const viewerId = req.session?.user?._id?.toString?.();
+    if (!viewerId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const me = await User.findById(viewerId, 'favorites').lean();
+    if (!me) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const favoriteIds = (me.favorites || []).map((x) => x?.toString?.() || x);
+    if (!favoriteIds.length) {
+      return res.status(200).json([]);
+    }
+    // Fetch photos for favorites; do not leak non-visible restricted photos
+    const viewerObj = new mongoose.Types.ObjectId(viewerId);
+    const seededOwners = await User.find({ password: 'weak' }, '_id').lean();
+    const seededOwnerIds = seededOwners.map((u) => u._id);
+    const photos = await Photo.find({
+      _id: { $in: favoriteIds },
+      $or: [
+        { user_id: viewerObj }, // own
+        { shared_with: { $exists: false } }, // public
+        { shared_with: { $in: [viewerObj] } }, // shared with viewer
+        {
+          $and: [
+            { shared_with: { $exists: true, $size: 0 } },
+            { user_id: { $in: seededOwnerIds } },
+          ],
+        }, // seeded owner-only treated as public
+      ],
+    })
+      .select('_id user_id file_name date_time caption')
+      .populate('user_id', 'first_name last_name')
+      .lean();
+    const mapped = (photos || []).map((p) => ({
+      _id: p._id,
+      file_name: p.file_name,
+      date_time: p.date_time,
+      caption: p.caption || '',
+      user: {
+        _id: p.user_id?._id || p.user_id,
+        first_name: p.user_id?.first_name || '',
+        last_name: p.user_id?.last_name || '',
+      },
+    }));
+    mapped.sort((a, b) => new Date(b.date_time) - new Date(a.date_time));
+    return res.status(200).json(mapped);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Error in GET /favorites:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+/**
+ * POST /favorites/:photo_id
+ * Adds a photo to the current user's favorites.
+ */
+export async function addFavorite(req, res) {
+  const { photo_id } = req.params;
+  try {
+    const viewerId = req.session?.user?._id?.toString?.();
+    if (!viewerId) return res.status(401).json({ message: 'Unauthorized' });
+    if (!mongoose.Types.ObjectId.isValid(photo_id)) {
+      return res.status(400).json({ message: 'Invalid photo id' });
+    }
+    // Ensure photo exists
+    const photo = await Photo.findById(photo_id, '_id').lean();
+    if (!photo) {
+      return res.status(404).json({ message: 'Photo not found' });
+    }
+    await User.updateOne(
+      { _id: viewerId },
+      { $addToSet: { favorites: new mongoose.Types.ObjectId(photo_id) } }
+    );
+    return res.status(200).json({ favorited: true });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Error in POST /favorites/:photo_id:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+/**
+ * DELETE /favorites/:photo_id
+ * Removes a photo from the current user's favorites.
+ */
+export async function removeFavorite(req, res) {
+  const { photo_id } = req.params;
+  try {
+    const viewerId = req.session?.user?._id?.toString?.();
+    if (!viewerId) return res.status(401).json({ message: 'Unauthorized' });
+    if (!mongoose.Types.ObjectId.isValid(photo_id)) {
+      return res.status(400).json({ message: 'Invalid photo id' });
+    }
+    await User.updateOne(
+      { _id: viewerId },
+      { $pull: { favorites: new mongoose.Types.ObjectId(photo_id) } }
+    );
+    return res.status(200).json({ favorited: false });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Error in DELETE /favorites/:photo_id:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
 export async function listUsers(req, res) {
   try {
     const users = await User.find(

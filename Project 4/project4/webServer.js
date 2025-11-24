@@ -18,6 +18,9 @@ import {
   getCounts,
   getUsageHighlights,
   deleteUser as deleteUserHandler,
+  getFavorites as getFavoritesHandler,
+  addFavorite as addFavoriteHandler,
+  removeFavorite as removeFavoriteHandler,
 } from './controllers/userController.js';
 import {
   uploadMiddleware as uploadPhotoMiddleware,
@@ -198,6 +201,11 @@ app.get('/mentionsOfUser/:id', getMentionsOfUserHandler);
 
 // Activities feed (recent N, default 5)
 app.get('/activities', getRecentActivities);
+
+// Favorites (current user)
+app.get('/favorites', getFavoritesHandler);
+app.post('/favorites/:photo_id', addFavoriteHandler);
+app.delete('/favorites/:photo_id', removeFavoriteHandler);
 
 /* ---------- START SERVER ---------- */
 const server = app.listen(portno, () => {

@@ -24,6 +24,8 @@ const photoSchema = new mongoose.Schema({
   file_name: String,
   // The date and time when the photo was added to the database.
   date_time: { type: Date, default: Date.now },
+  // Optional caption/description for the photo.
+  caption: { type: String, default: '' },
   // The ID of the user who created the photo.
   user_id: mongoose.Schema.Types.ObjectId,
   // Array of comment objects representing the comments made on this photo.

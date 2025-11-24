@@ -100,6 +100,9 @@ export default function TopBar() {
     if (location.pathname === '/activities') {
       return 'Recent Activities';
     }
+    if (location.pathname === '/favorites') {
+      return 'My Favorites';
+    }
     if (location.pathname === '/users') {
       return 'All Users';
     }
@@ -204,6 +207,18 @@ export default function TopBar() {
                 onClick={() => navigate('/activities')}
               >
                 Activities
+              </Button>
+              <Button
+                variant='outlined'
+                size='small'
+                sx={{
+                  color: 'white',
+                  borderColor: 'rgba(255,255,255,0.6)',
+                  textTransform: 'none',
+                }}
+                onClick={() => navigate('/favorites')}
+              >
+                Favorites
               </Button>
               <Button
                 variant='outlined'
