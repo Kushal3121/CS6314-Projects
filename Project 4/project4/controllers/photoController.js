@@ -241,19 +241,6 @@ export async function deletePhoto(req, res) {
   }
 }
 
-function buildVisibilityFilterForPhoto(viewerObj) {
-  if (!viewerObj) {
-    // Only public or seeded special case will be considered by caller if needed
-    return { shared_with: { $exists: false } };
-  }
-  return {
-    $or: [
-      { shared_with: { $exists: false } },
-      { shared_with: { $in: [viewerObj] } },
-    ],
-  };
-}
-
 export async function likePhoto(req, res) {
   const { photo_id } = req.params;
   try {

@@ -11,8 +11,14 @@ import {
   Divider,
   IconButton,
 } from '@mui/material';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import { MentionsInput, Mention } from 'react-mentions';
 import './styles.css';
+import ConfirmDialog from '../Common/ConfirmDialog.jsx';
 import useAppStore from '../../store/useAppStore.js';
+import socket from '../../lib/socketClient.js';
 import {
   fetchPhotosOfUser,
   fetchUsers,
@@ -23,14 +29,7 @@ import {
   likePhoto as likePhotoApi,
   unlikePhoto as unlikePhotoApi,
   favoritePhoto as favoritePhotoApi,
-  unfavoritePhoto as unfavoritePhotoApi,
 } from '../../api/index.js';
-import socket from '../../lib/socketClient.js';
-import { MentionsInput, Mention } from 'react-mentions';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import ConfirmDialog from '../Common/ConfirmDialog.jsx';
 
 export default function UserPhotos() {
   const { userId, photoId } = useParams();
@@ -121,12 +120,12 @@ export default function UserPhotos() {
 
   // Live like count updates via sockets
   useEffect(() => {
-    const handler = ({ photoId, likesCount, userId: likerId, liked }) => {
+    const handler = ({ photoId: updatedPhotoId, likesCount, userId: likerId, liked }) => {
       queryClient.setQueryData(queryKeys.photosOfUser(userId), (prev) => {
         if (!prev) return prev;
         return prev.map((p) => {
           const id = p._id?.toString?.() || p._id;
-          if (id !== photoId) return p;
+          if (id !== updatedPhotoId) return p;
           const viewerId = currentUser?._id;
           const nextLikedByViewer = viewerId && viewerId === likerId ? liked : p.likedByViewer;
           return {
@@ -145,14 +144,7 @@ export default function UserPhotos() {
   }, [userId, queryClient, currentUser]);
 
   const favoriteMutation = useMutation({
-    mutationFn: (photoId) => favoritePhotoApi(photoId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.favorites });
-    },
-  });
-  const unfavoriteMutation = useMutation({
-    mutationFn: (photoId) => unfavoritePhotoApi(photoId),
+    mutationFn: (targetPhotoId) => favoritePhotoApi(targetPhotoId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.favorites });
@@ -222,9 +214,13 @@ export default function UserPhotos() {
                   color={p.likedByViewer ? 'secondary' : 'primary'}
                   sx={{ textTransform: 'none' }}
                   disabled={likeMutation.isPending || unlikeMutation.isPending}
-                  onClick={() =>
-                    p.likedByViewer ? unlikeMutation.mutate(p._id) : likeMutation.mutate(p._id)
-                  }
+                  onClick={() => {
+                    if (p.likedByViewer) {
+                      unlikeMutation.mutate(p._id);
+                    } else {
+                      likeMutation.mutate(p._id);
+                    }
+                  }}
                   startIcon={p.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />}
                 >
                   {p.likedByViewer ? 'Unlike' : 'Like'}
@@ -462,9 +458,13 @@ export default function UserPhotos() {
                   color={photo.likedByViewer ? 'secondary' : 'primary'}
                   sx={{ textTransform: 'none' }}
                   disabled={likeMutation.isPending || unlikeMutation.isPending}
-                  onClick={() =>
-                    photo.likedByViewer ? unlikeMutation.mutate(photo._id) : likeMutation.mutate(photo._id)
-                  }
+                  onClick={() => {
+                    if (photo.likedByViewer) {
+                      unlikeMutation.mutate(photo._id);
+                    } else {
+                      likeMutation.mutate(photo._id);
+                    }
+                  }}
                   startIcon={photo.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />}
                 >
                   {photo.likedByViewer ? 'Unlike' : 'Like'}
