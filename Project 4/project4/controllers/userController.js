@@ -1,6 +1,14 @@
 import mongoose from 'mongoose';
 import User from '../schema/user.js';
 import Photo from '../schema/photo.js';
+import Activity from '../schema/activity.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = dirname(__dirname);
 import { logActivity } from './activityController.js';
 
 export async function register(req, res) {
@@ -248,6 +256,78 @@ export async function getUsageHighlights(req, res) {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Error in /user/:id/highlights:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+/**
+ * DELETE /user/:id
+ * Deletes the user account, all their photos (and files), all comments authored by them,
+ * and their activities, then logs them out.
+ */
+export async function deleteUser(req, res) {
+  const { id } = req.params;
+  try {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid user id' });
+    }
+    const sessionUserId = req.session?.user?._id?.toString?.();
+    if (!sessionUserId || sessionUserId !== id) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    const objectId = new mongoose.Types.ObjectId(id);
+
+    // Fetch photos to remove files
+    const photos = await Photo.find(
+      { user_id: { $in: [id, objectId] } },
+      '_id file_name'
+    ).lean();
+    // Delete photo docs
+    await Photo.deleteMany({ user_id: { $in: [id, objectId] } });
+    // Delete files best-effort
+    for (const p of photos) {
+      try {
+        if (p.file_name) {
+          const filePath = join(projectRoot, 'images', p.file_name);
+          fs.unlink(filePath, () => {});
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    // Remove comments authored by this user across all photos
+    await Photo.updateMany(
+      {},
+      { $pull: { comments: { user_id: { $in: [id, objectId] } } } }
+    );
+    // Delete activities authored by user or tied to user's photos
+    try {
+      const photoIds = photos.map((p) => p._id);
+      await Activity.deleteMany({
+        $or: [
+          { user_id: objectId },
+          { user_id: id },
+          { photo_id: { $in: photoIds } },
+        ],
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to delete user activities:', e);
+    }
+    // Delete user
+    await User.deleteOne({ _id: objectId });
+
+    // Destroy session
+    return req.session.destroy((err) => {
+      if (err) {
+        // eslint-disable-next-line no-console
+        console.error('Error destroying session during delete:', err);
+      }
+      return res.status(200).json({ message: 'Account deleted' });
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Error in DELETE /user/:id:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
 }

@@ -9,6 +9,7 @@ import {
   Stack,
   Avatar,
   Divider,
+  IconButton,
 } from '@mui/material';
 import './styles.css';
 import useAppStore from '../../store/useAppStore.js';
@@ -17,8 +18,12 @@ import {
   fetchUsers,
   postComment,
   queryKeys,
+  deletePhoto as deletePhotoApi,
+  deleteComment as deleteCommentApi,
 } from '../../api/index.js';
 import { MentionsInput, Mention } from 'react-mentions';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ConfirmDialog from '../Common/ConfirmDialog.jsx';
 
 export default function UserPhotos() {
   const { userId, photoId } = useParams();
@@ -30,6 +35,7 @@ export default function UserPhotos() {
   const [newComments, setNewComments] = useState({});
   const navigate = useNavigate();
   const advancedEnabled = useAppStore((s) => s.advancedEnabled);
+  const currentUser = useAppStore((s) => s.currentUser);
   const queryClient = useQueryClient();
   const setTextFor = (photoKey, text) =>
     setNewComments((prev) => ({ ...prev, [photoKey]: text }));
@@ -56,6 +62,7 @@ export default function UserPhotos() {
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
       queryClient.invalidateQueries({ queryKey: queryKeys.activities(5) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userHighlights(userId) });
       // Invalidate mentions for any users referenced
       if (data?.mentions?.length) {
         for (const mentionedId of data.mentions) {
@@ -64,6 +71,32 @@ export default function UserPhotos() {
           });
         }
       }
+    },
+  });
+
+  const [confirmPhotoId, setConfirmPhotoId] = useState(null);
+  const [confirmComment, setConfirmComment] = useState(null); // { photoId, commentId }
+
+  const deletePhotoMutation = useMutation({
+    mutationFn: (targetPhotoId) => deletePhotoApi(targetPhotoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities(5) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userHighlights(userId) });
+      setConfirmPhotoId(null);
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: ({ photoId: targetPhotoId, commentId }) =>
+      deleteCommentApi({ photoId: targetPhotoId, commentId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities(5) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userHighlights(userId) });
+      setConfirmComment(null);
     },
   });
 
@@ -119,9 +152,24 @@ export default function UserPhotos() {
               alt='user upload'
               className='photo-img-modern'
             />
-            <Typography variant='caption' className='upload-time'>
-              Uploaded: {new Date(p.date_time).toLocaleString()}
-            </Typography>
+            <Stack direction='row' justifyContent='space-between' alignItems='center'>
+              <Typography variant='caption' className='upload-time' sx={{ m: 0 }}>
+                Uploaded: {new Date(p.date_time).toLocaleString()}
+              </Typography>
+              {(currentUser &&
+                ((p.user_id?.toString?.() || p.user_id) === currentUser._id)) ? (
+                <Button
+                  size='small'
+                  variant='outlined'
+                  color='error'
+                  sx={{ textTransform: 'none' }}
+                  disabled={deletePhotoMutation.isPending}
+                  onClick={() => setConfirmPhotoId(p._id)}
+                >
+                  Delete Photo
+                </Button>
+              ) : null}
+            </Stack>
 
             <Divider sx={{ my: 1 }} />
 
@@ -139,7 +187,7 @@ export default function UserPhotos() {
                     {c.user.first_name[0]}
                     {c.user.last_name[0]}
                   </Avatar>
-                  <Box>
+                  <Box sx={{ flex: 1 }}>
                     <Typography variant='body2' className='comment-header'>
                       <Link
                         to={`/users/${c.user._id}`}
@@ -153,6 +201,15 @@ export default function UserPhotos() {
                       {c.comment}
                     </Typography>
                   </Box>
+                  {(currentUser && c.user._id === currentUser._id) ? (
+                    <IconButton
+                      aria-label='Delete comment'
+                      size='small'
+                      onClick={() => setConfirmComment({ photoId: p._id, commentId: c._id })}
+                    >
+                      <DeleteOutlineIcon fontSize='small' />
+                    </IconButton>
+                  ) : null}
                 </Stack>
               </Box>
             ))}
@@ -222,6 +279,33 @@ export default function UserPhotos() {
             </Box>
           </Paper>
         ))}
+        {/* Confirmations - gallery mode */}
+        <ConfirmDialog
+          open={Boolean(confirmPhotoId)}
+          title='Delete Photo'
+          description='This will permanently delete the photo and its comments.'
+          confirmText='Delete'
+          confirmColor='error'
+          loading={deletePhotoMutation.isPending}
+          onCancel={() => setConfirmPhotoId(null)}
+          onConfirm={() => confirmPhotoId && deletePhotoMutation.mutate(confirmPhotoId)}
+        />
+        <ConfirmDialog
+          open={Boolean(confirmComment)}
+          title='Delete Comment'
+          description='This will permanently delete your comment.'
+          confirmText='Delete'
+          confirmColor='error'
+          loading={deleteCommentMutation.isPending}
+          onCancel={() => setConfirmComment(null)}
+          onConfirm={() =>
+            confirmComment &&
+            deleteCommentMutation.mutate({
+              photoId: confirmComment.photoId,
+              commentId: confirmComment.commentId,
+            })
+          }
+        />
       </Box>
     );
   }
@@ -250,6 +334,21 @@ export default function UserPhotos() {
       <Paper elevation={0} className='viewer-split-card'>
         {/* LEFT — Photo */}
         <Box className='viewer-photo-box'>
+          {(currentUser &&
+            ((photo.user_id?.toString?.() || photo.user_id) === currentUser._id)) ? (
+            <Box sx={{ position: 'absolute', top: 10, right: 10 }}>
+              <Button
+                size='small'
+                variant='outlined'
+                color='error'
+                sx={{ textTransform: 'none' }}
+                disabled={deletePhotoMutation.isPending}
+                onClick={() => setConfirmPhotoId(photo._id)}
+              >
+                Delete Photo
+              </Button>
+            </Box>
+          ) : null}
           <img
             src={`/images/${photo.file_name}`}
             alt='user upload'
@@ -358,7 +457,7 @@ export default function UserPhotos() {
                       {c.user.first_name[0]}
                       {c.user.last_name[0]}
                     </Avatar>
-                    <Box>
+                    <Box sx={{ flex: 1 }}>
                       <Typography
                         variant='body2'
                         sx={{
@@ -387,6 +486,23 @@ export default function UserPhotos() {
                         {c.comment}
                       </Typography>
                     </Box>
+                    {(currentUser && c.user._id === currentUser._id) ? (
+                      <IconButton
+                        aria-label='Delete comment'
+                        size='small'
+                        onClick={() => {
+                          // eslint-disable-next-line no-alert
+                          if (window.confirm('Delete this comment?')) {
+                            deleteCommentMutation.mutate({
+                              photoId: photo._id,
+                              commentId: c._id,
+                            });
+                          }
+                        }}
+                      >
+                        <DeleteOutlineIcon fontSize='small' />
+                      </IconButton>
+                    ) : null}
                   </Stack>
                 </Box>
               ))
@@ -462,6 +578,33 @@ export default function UserPhotos() {
           </Box>
         </Box>
       </Paper>
+      {/* Confirmations - advanced mode */}
+      <ConfirmDialog
+        open={Boolean(confirmPhotoId)}
+        title='Delete Photo'
+        description='This will permanently delete the photo and its comments.'
+        confirmText='Delete'
+        confirmColor='error'
+        loading={deletePhotoMutation.isPending}
+        onCancel={() => setConfirmPhotoId(null)}
+        onConfirm={() => confirmPhotoId && deletePhotoMutation.mutate(confirmPhotoId)}
+      />
+      <ConfirmDialog
+        open={Boolean(confirmComment)}
+        title='Delete Comment'
+        description='This will permanently delete your comment.'
+        confirmText='Delete'
+        confirmColor='error'
+        loading={deleteCommentMutation.isPending}
+        onCancel={() => setConfirmComment(null)}
+        onConfirm={() =>
+          confirmComment &&
+          deleteCommentMutation.mutate({
+            photoId: confirmComment.photoId,
+            commentId: confirmComment.commentId,
+          })
+        }
+      />
     </Box>
   );
 }

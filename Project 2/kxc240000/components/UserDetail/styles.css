@@ -18,7 +18,7 @@
 
 .user-detail-wide:hover {
   box-shadow: 0 8px 28px rgba(25, 118, 210, 0.15);
-  transform: translateY(-3px);
+  /* transform: translateY(-3px); */
 }
 
 /* Avatar section */

@@ -17,16 +17,19 @@ import {
   getUserById,
   getCounts,
   getUsageHighlights,
+  deleteUser as deleteUserHandler,
 } from './controllers/userController.js';
 import {
   uploadMiddleware as uploadPhotoMiddleware,
   uploadPhoto as uploadPhotoHandler,
   getPhotosOfUser as getPhotosOfUserHandler,
+  deletePhoto as deletePhotoHandler,
 } from './controllers/photoController.js';
 import {
   addCommentToPhoto as addCommentToPhotoHandler,
   getCommentsOfUser as getCommentsOfUserHandler,
   getMentionsOfUser as getMentionsOfUserHandler,
+  deleteComment as deleteCommentHandler,
 } from './controllers/commentController.js';
 
 import User from './schema/user.js';
@@ -163,18 +166,24 @@ app.get('/user/list', listUsers);
 
 // Add a new comment to a photo
 app.post('/commentsOfPhoto/:photo_id', addCommentToPhotoHandler);
+// Delete a comment (author-only)
+app.delete('/commentsOfPhoto/:photo_id/:comment_id', deleteCommentHandler);
 
 // Return photo + comment counts per user
 app.get('/user/counts', getCounts);
 
 // Get user details by ID
 app.get('/user/:id', getUserById);
+// Delete own user account
+app.delete('/user/:id', deleteUserHandler);
 
 // Get user highlights (most recent / most commented photo)
 app.get('/user/:id/highlights', getUsageHighlights);
 
 // Get photos of a specific user
 app.get('/photosOfUser/:id', getPhotosOfUserHandler);
+// Delete a photo (owner-only)
+app.delete('/photos/:photo_id', deletePhotoHandler);
 
 // Return all comments authored by a user (with thumbnails)
 app.get('/commentsOfUser/:id', getCommentsOfUserHandler);

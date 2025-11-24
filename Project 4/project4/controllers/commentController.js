@@ -36,10 +36,7 @@ export async function addCommentToPhoto(req, res) {
       validMentionIds = validUsers.map((u) => u._id);
     }
     // Store clean text that displays as "@Name"
-    const displayText = trimmed.replace(
-      /\@\[([^\]]+)\]\(([^\)]+)\)/g,
-      '@$1'
-    );
+    const displayText = trimmed.replace(/\@\[([^\]]+)\]\(([^\)]+)\)/g, '@$1');
     // Atomically push comment to avoid mutating other fields
     await Photo.updateOne(
       { _id: photo_id },
@@ -147,17 +144,13 @@ export async function getMentionsOfUser(req, res) {
 
     // Fetch owners for labeling
     const ownerIds = [
-      ...new Set(
-        photos.map((p) => p.user_id?.toString?.() || p.user_id)
-      ),
+      ...new Set(photos.map((p) => p.user_id?.toString?.() || p.user_id)),
     ];
     const owners = await User.find(
       { _id: { $in: ownerIds } },
       '_id first_name last_name'
     ).lean();
-    const ownerMap = new Map(
-      owners.map((o) => [o._id.toString(), o])
-    );
+    const ownerMap = new Map(owners.map((o) => [o._id.toString(), o]));
 
     const result = photos.map((p) => {
       const ownerKey = p.user_id?.toString?.() || p.user_id;
@@ -178,3 +171,44 @@ export async function getMentionsOfUser(req, res) {
   }
 }
 
+export async function deleteComment(req, res) {
+  const { photo_id, comment_id } = req.params;
+  try {
+    if (
+      !mongoose.Types.ObjectId.isValid(photo_id) ||
+      !mongoose.Types.ObjectId.isValid(comment_id)
+    ) {
+      return res.status(400).json({ message: 'Invalid ids' });
+    }
+    const userId = req.session?.user?._id?.toString?.();
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const photo = await Photo.findById(photo_id).lean();
+    if (!photo) {
+      return res.status(404).json({ message: 'Photo not found' });
+    }
+    const target = (photo.comments || []).find(
+      (c) => (c._id?.toString?.() || c._id) === comment_id
+    );
+    if (!target) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+    const authorId = target.user_id?.toString?.() || target.user_id;
+    if (authorId !== userId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    await Photo.updateOne(
+      { _id: photo_id },
+      { $pull: { comments: { _id: new mongoose.Types.ObjectId(comment_id) } } }
+    );
+    return res.status(200).json({ message: 'Comment deleted' });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      'Error in DELETE /commentsOfPhoto/:photo_id/:comment_id',
+      err
+    );
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}

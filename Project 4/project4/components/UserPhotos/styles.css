@@ -106,6 +106,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  position: relative; /* ensure absolutely-positioned actions align within */
 }
 
 .viewer-photo-fixed {

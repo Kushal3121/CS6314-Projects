@@ -89,3 +89,21 @@ export const fetchActivities = async (limit = 5) => {
   });
   return data;
 };
+
+// Deletions
+export const deletePhoto = async (photoId) => {
+  const { data } = await apiClient.delete(`/photos/${photoId}`);
+  return data;
+};
+
+export const deleteComment = async ({ photoId, commentId }) => {
+  const { data } = await apiClient.delete(
+    `/commentsOfPhoto/${photoId}/${commentId}`
+  );
+  return data;
+};
+
+export const deleteUserAccount = async (userId) => {
+  const { data } = await apiClient.delete(`/user/${userId}`);
+  return data;
+};

@@ -1,9 +1,11 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import fs from 'fs';
 import mongoose from 'mongoose';
 import multer from 'multer';
 import Photo from '../schema/photo.js';
 import User from '../schema/user.js';
+import Activity from '../schema/activity.js';
 import { logActivity } from './activityController.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -159,6 +161,52 @@ export async function getPhotosOfUser(req, res) {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Error in /photosOfUser/:id:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+export async function deletePhoto(req, res) {
+  const { photo_id } = req.params;
+  try {
+    if (!mongoose.Types.ObjectId.isValid(photo_id)) {
+      return res.status(400).json({ message: 'Invalid photo id' });
+    }
+    const userId = req.session?.user?._id?.toString?.();
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const photo = await Photo.findById(photo_id).lean();
+    if (!photo) {
+      return res.status(404).json({ message: 'Photo not found' });
+    }
+    const ownerId = photo.user_id?.toString?.() || photo.user_id;
+    if (ownerId !== userId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    // Delete document
+    await Photo.deleteOne({ _id: photo_id });
+    // Best-effort: delete file from disk (ignore errors)
+    try {
+      if (photo.file_name) {
+        const filePath = join(projectRoot, 'images', photo.file_name);
+        fs.unlink(filePath, () => {});
+      }
+    } catch (e) {
+      // ignore
+    }
+    // Remove activities tied to this photo (upload/comments)
+    try {
+      await Activity.deleteMany({
+        photo_id: new mongoose.Types.ObjectId(photo_id),
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to delete activities for photo:', e);
+    }
+    return res.status(200).json({ message: 'Photo deleted' });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Error in DELETE /photos/:photo_id:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
 }

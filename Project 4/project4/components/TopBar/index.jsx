@@ -20,6 +20,7 @@ import {
   FormControlLabel as MuiFormControlLabel,
   Autocomplete,
   TextField,
+  Stack,
 } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -30,8 +31,10 @@ import {
   logoutRequest,
   uploadPhoto,
   queryKeys,
+  deleteUserAccount,
 } from '../../api/index.js';
 import useAppStore from '../../store/useAppStore.js';
+import ConfirmDialog from '../Common/ConfirmDialog.jsx';
 
 /**
  * TopBar
@@ -51,6 +54,7 @@ export default function TopBar() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [visibility, setVisibility] = useState('public'); // public | private | shared
   const [sharedWith, setSharedWith] = useState([]);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const { data: allUsers = [] } = useQuery({
     queryKey: queryKeys.users,
     queryFn: fetchUsers,
@@ -125,8 +129,21 @@ export default function TopBar() {
         });
         queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
         queryClient.invalidateQueries({ queryKey: queryKeys.activities(5) });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.userHighlights(currentUser._id),
+        });
         navigate(`/photos/${currentUser._id}`);
       }
+    },
+  });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => deleteUserAccount(currentUser._id),
+    onSuccess: () => {
+      setDeleteOpen(false);
+      clearCurrentUser();
+      queryClient.clear();
+      navigate('/users');
     },
   });
 
@@ -167,10 +184,15 @@ export default function TopBar() {
           {rightText}
         </Typography>
 
-        {/* Right - Add Photo, Advanced toggle and Logout */}
+        {/* Right - Actions */}
         <Box className='topbar-toggle'>
           {currentUser ? (
-            <>
+            <Stack
+              direction='row'
+              spacing={1}
+              alignItems='center'
+              sx={{ flexWrap: 'nowrap' }}
+            >
               <Button
                 variant='outlined'
                 size='small'
@@ -178,7 +200,6 @@ export default function TopBar() {
                   color: 'white',
                   borderColor: 'rgba(255,255,255,0.6)',
                   textTransform: 'none',
-                  mr: 1,
                 }}
                 onClick={() => navigate('/activities')}
               >
@@ -191,12 +212,24 @@ export default function TopBar() {
                   color: 'white',
                   borderColor: 'rgba(255,255,255,0.6)',
                   textTransform: 'none',
-                  mr: 1,
                 }}
                 disabled={uploadMutation.isPending}
                 onClick={startUploadFlow}
               >
                 {uploadMutation.isPending ? 'Uploading...' : 'Add Photo'}
+              </Button>
+              <Button
+                variant='outlined'
+                size='small'
+                color='error'
+                sx={{
+                  textTransform: 'none',
+                  borderColor: 'rgba(255,255,255,0.6)',
+                  color: 'white',
+                }}
+                onClick={() => setDeleteOpen(true)}
+              >
+                Delete Account
               </Button>
               <Dialog
                 open={uploadOpen}
@@ -313,8 +346,18 @@ export default function TopBar() {
               >
                 Logout
               </Button>
-            </>
+            </Stack>
           ) : null}
+          <ConfirmDialog
+            open={deleteOpen}
+            title='Delete Account'
+            description='This will permanently delete your user, photos, and comments. This action cannot be undone.'
+            confirmText='Delete'
+            confirmColor='error'
+            loading={deleteAccountMutation?.isPending}
+            onCancel={() => setDeleteOpen(false)}
+            onConfirm={() => deleteAccountMutation.mutate()}
+          />
         </Box>
       </Toolbar>
     </AppBar>
