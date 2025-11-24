@@ -168,25 +168,7 @@ export async function removeFavorite(req, res) {
 }
 export async function listUsers(req, res) {
   try {
-    const users = await User.find(
-      { password: 'weak' },
-      '_id first_name last_name'
-    ).lean();
-    // If the logged-in user is not one of the seeded users, append them so the UI can show
-    // the current account in the sidebar without affecting test counts (tests login as seeded users).
-    const sessionUserId = req.session?.user?._id;
-    if (
-      sessionUserId &&
-      !users.find((u) => u._id.toString() === sessionUserId.toString())
-    ) {
-      const me = await User.findOne(
-        { _id: sessionUserId },
-        '_id first_name last_name'
-      ).lean();
-      if (me) {
-        users.push(me);
-      }
-    }
+    const users = await User.find({}, '_id first_name last_name').lean();
     return res.status(200).json(users);
   } catch (err) {
     // eslint-disable-next-line no-console

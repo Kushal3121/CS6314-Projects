@@ -7,6 +7,7 @@ import Photo from '../schema/photo.js';
 import User from '../schema/user.js';
 import Activity from '../schema/activity.js';
 import { logActivity } from './activityController.js';
+import { getIO } from '../socket.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -293,6 +294,20 @@ export async function likePhoto(req, res) {
     );
     const updated = await Photo.findById(photo_id, 'likes').lean();
     const likesCount = Array.isArray(updated?.likes) ? updated.likes.length : 0;
+
+    try {
+      const io = getIO();
+      io.emit('photo:likeUpdated', {
+        photoId: photo_id,
+        likesCount,
+        userId: viewerId,
+        liked: true,
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('Socket emit failed (like):', e.message);
+    }
+
     return res.status(200).json({ liked: true, likesCount });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -315,6 +330,18 @@ export async function unlikePhoto(req, res) {
     await Photo.updateOne({ _id: photo_id }, { $pull: { likes: viewerObj } });
     const updated = await Photo.findById(photo_id, 'likes').lean();
     const likesCount = Array.isArray(updated?.likes) ? updated.likes.length : 0;
+    try {
+      const io = getIO();
+      io.emit('photo:likeUpdated', {
+        photoId: photo_id,
+        likesCount,
+        userId: viewerId,
+        liked: false,
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('Socket emit failed (unlike):', e.message);
+    }
     return res.status(200).json({ liked: false, likesCount });
   } catch (err) {
     // eslint-disable-next-line no-console

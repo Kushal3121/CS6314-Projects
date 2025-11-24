@@ -25,6 +25,7 @@ import {
   favoritePhoto as favoritePhotoApi,
   unfavoritePhoto as unfavoritePhotoApi,
 } from '../../api/index.js';
+import socket from '../../lib/socketClient.js';
 import { MentionsInput, Mention } from 'react-mentions';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
@@ -117,6 +118,31 @@ export default function UserPhotos() {
       setConfirmComment(null);
     },
   });
+
+  // Live like count updates via sockets
+  useEffect(() => {
+    const handler = ({ photoId, likesCount, userId: likerId, liked }) => {
+      queryClient.setQueryData(queryKeys.photosOfUser(userId), (prev) => {
+        if (!prev) return prev;
+        return prev.map((p) => {
+          const id = p._id?.toString?.() || p._id;
+          if (id !== photoId) return p;
+          const viewerId = currentUser?._id;
+          const nextLikedByViewer = viewerId && viewerId === likerId ? liked : p.likedByViewer;
+          return {
+            ...p,
+            likesCount,
+            likedByViewer: nextLikedByViewer,
+          };
+        });
+      });
+    };
+
+    socket.on('photo:likeUpdated', handler);
+    return () => {
+      socket.off('photo:likeUpdated', handler);
+    };
+  }, [userId, queryClient, currentUser]);
 
   const favoriteMutation = useMutation({
     mutationFn: (photoId) => favoritePhotoApi(photoId),
