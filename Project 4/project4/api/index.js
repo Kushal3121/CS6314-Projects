@@ -10,6 +10,7 @@ export const queryKeys = {
   userHighlights: (userId) => ['userHighlights', userId],
   mentionsOfUser: (userId) => ['mentionsOfUser', userId],
   activities: (limit = 5) => ['activities', limit],
+  userLastActivities: ['userLastActivities'],
   favorites: ['favorites'],
 };
 
@@ -88,6 +89,11 @@ export const fetchActivities = async (limit = 5) => {
   const { data } = await apiClient.get('/activities', {
     params: { limit },
   });
+  return data;
+};
+
+export const fetchUserLastActivities = async () => {
+  const { data } = await apiClient.get('/activities/last-by-user');
   return data;
 };
 

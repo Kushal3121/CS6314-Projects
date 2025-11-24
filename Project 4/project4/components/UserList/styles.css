@@ -67,3 +67,32 @@
 .chip-comment:hover {
   background-color: #d32f2f !important;
 }
+
+/* Last activity inline row */
+.user-activity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #555;
+  font-size: 11px;
+}
+
+.user-activity-thumb {
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 4px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  display: inline-block;
+}
+
+.user-activity-text {
+  line-height: 1;
+}
+
+.user-activity-time {
+  color: #888;
+}
+
+.userlist-title-secondary {
+  margin-top: 8px;
+}

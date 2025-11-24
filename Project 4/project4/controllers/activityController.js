@@ -79,4 +79,38 @@ export async function getRecentActivities(req, res) {
   }
 }
 
+/**
+ * GET /activities/last-by-user
+ * Returns the most recent activity for each user.
+ * Response: [{ user_id, type, date_time, photo_file_name, photo_id }]
+ */
+export async function getLastActivityByUser(req, res) {
+  try {
+    const agg = await Activity.aggregate([
+      { $sort: { date_time: -1 } },
+      {
+        $group: {
+          _id: '$user_id',
+          type: { $first: '$type' },
+          date_time: { $first: '$date_time' },
+          photo_file_name: { $first: '$photo_file_name' },
+          photo_id: { $first: '$photo_id' },
+        },
+      },
+    ]);
+    const mapped = (agg || []).map((a) => ({
+      user_id: a._id?.toString?.() || a._id,
+      type: a.type,
+      date_time: a.date_time,
+      photo_file_name: a.photo_file_name || null,
+      photo_id: a.photo_id || null,
+    }));
+    return res.status(200).json(mapped);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Error in GET /activities/last-by-user:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
 
