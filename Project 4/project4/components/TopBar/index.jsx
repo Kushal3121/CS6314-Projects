@@ -16,8 +16,6 @@ import {
   FormControl,
   FormLabel,
   FormHelperText,
-  FormGroup,
-  FormControlLabel as MuiFormControlLabel,
   Autocomplete,
   TextField,
   Stack,
@@ -328,7 +326,7 @@ export default function TopBar() {
                 </DialogActions>
               </Dialog>
               <FormControlLabel
-                control={
+                control={(
                   <Switch
                     checked={advancedEnabled}
                     onChange={handleToggle}
@@ -337,14 +335,13 @@ export default function TopBar() {
                       '& .MuiSwitch-switchBase.Mui-checked': {
                         color: '#ffffffff',
                       },
-                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
-                        {
-                          backgroundColor: '#ffffffff',
-                        },
+                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                        backgroundColor: '#ffffffff',
+                      },
                     }}
                     inputProps={{ 'aria-label': 'Enable advanced features' }}
                   />
-                }
+                )}
                 label='Advanced'
                 labelPlacement='start'
                 sx={{ color: 'white', fontSize: '0.9rem', mr: 1 }}
