@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import bluebird from 'bluebird';
 import express from 'express';
 import session from 'express-session';
+import { createServer } from 'http';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { login, logout } from './controllers/authController.js';
@@ -41,9 +42,13 @@ import User from './schema/user.js';
 import Photo from './schema/photo.js';
 import SchemaInfo from './schema/schemaInfo.js';
 import { getRecentActivities, getLastActivityByUser } from './controllers/activityController.js';
+import { initIO } from './socket.js';
 
 const portno = 3001;
 const app = express();
+const httpServer = createServer(app);
+const io = initIO(httpServer);
+app.locals.io = io;
 
 // Parse JSON bodies
 app.use(express.json());
@@ -210,9 +215,8 @@ app.post('/favorites/:photo_id', addFavoriteHandler);
 app.delete('/favorites/:photo_id', removeFavoriteHandler);
 
 /* ---------- START SERVER ---------- */
-const server = app.listen(portno, () => {
-  const port = server.address().port;
+httpServer.listen(portno, () => {
   console.log(
-    `Listening at http://localhost:${port} exporting the directory ${__dirname}`
+    `Listening at http://localhost:${portno} exporting the directory ${__dirname}`
   );
 });

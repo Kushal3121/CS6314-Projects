@@ -31,7 +31,10 @@ const photoSchema = new mongoose.Schema({
   // Array of comment objects representing the comments made on this photo.
   comments: [commentSchema],
   // Optional sharing list: if undefined => public; [] => owner only; [ids] => restricted
-  shared_with: [mongoose.Schema.Types.ObjectId],
+  shared_with: {
+    type: [mongoose.Schema.Types.ObjectId],
+    default: undefined,
+  },
   // Likes: array of user ids who liked this photo
   likes: {
     type: [mongoose.Schema.Types.ObjectId],

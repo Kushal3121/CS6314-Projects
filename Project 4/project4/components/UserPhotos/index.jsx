@@ -11,8 +11,15 @@ import {
   Divider,
   IconButton,
 } from '@mui/material';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import { MentionsInput, Mention } from 'react-mentions';
+
 import './styles.css';
+import ConfirmDialog from '../Common/ConfirmDialog.jsx';
 import useAppStore from '../../store/useAppStore.js';
+import socket from '../../lib/socketClient.js';
 import {
   fetchPhotosOfUser,
   fetchUsers,
@@ -23,13 +30,7 @@ import {
   likePhoto as likePhotoApi,
   unlikePhoto as unlikePhotoApi,
   favoritePhoto as favoritePhotoApi,
-  unfavoritePhoto as unfavoritePhotoApi,
 } from '../../api/index.js';
-import { MentionsInput, Mention } from 'react-mentions';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import ConfirmDialog from '../Common/ConfirmDialog.jsx';
 
 export default function UserPhotos() {
   const { userId, photoId } = useParams();
@@ -49,27 +50,17 @@ export default function UserPhotos() {
     queryKey: queryKeys.users,
     queryFn: fetchUsers,
   });
-  const mentionData = useMemo(
-    () =>
-      users.map((u) => ({
-        id: u._id,
-        display: `${u.first_name} ${u.last_name}`,
-      })),
-    [users]
-  );
 
   const addCommentMutation = useMutation({
     mutationFn: ({ photoId: targetPhotoId, comment }) =>
       postComment({ photoId: targetPhotoId, comment }),
     onSuccess: (data) => {
-      // refresh photos cache so new comment appears
       queryClient.invalidateQueries({
         queryKey: queryKeys.photosOfUser(userId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
       queryClient.invalidateQueries({ queryKey: queryKeys.activities(5) });
       queryClient.invalidateQueries({ queryKey: queryKeys.userHighlights(userId) });
-      // Invalidate mentions for any users referenced
       if (data?.mentions?.length) {
         for (const mentionedId of data.mentions) {
           queryClient.invalidateQueries({
@@ -81,7 +72,7 @@ export default function UserPhotos() {
   });
 
   const [confirmPhotoId, setConfirmPhotoId] = useState(null);
-  const [confirmComment, setConfirmComment] = useState(null); // { photoId, commentId }
+  const [confirmComment, setConfirmComment] = useState(null);
 
   const likeMutation = useMutation({
     mutationFn: (targetPhotoId) => likePhotoApi(targetPhotoId),
@@ -118,20 +109,47 @@ export default function UserPhotos() {
     },
   });
 
+  useEffect(() => {
+    const handler = ({ photoId: updatedPhotoId, likesCount, userId: likerId, liked }) => {
+      queryClient.setQueryData(queryKeys.photosOfUser(userId), (prev) => {
+        if (!prev) return prev;
+        return prev.map((p) => {
+          const id = p._id?.toString?.() || p._id;
+          if (id !== updatedPhotoId) return p;
+          const viewerId = currentUser?._id;
+          const nextLikedByViewer = viewerId && viewerId === likerId ? liked : p.likedByViewer;
+          return {
+            ...p,
+            likesCount,
+            likedByViewer: nextLikedByViewer,
+          };
+        });
+      });
+    };
+
+    socket.on('photo:likeUpdated', handler);
+    return () => {
+      socket.off('photo:likeUpdated', handler);
+    };
+  }, [userId, queryClient, currentUser]);
+
   const favoriteMutation = useMutation({
-    mutationFn: (photoId) => favoritePhotoApi(photoId),
+    mutationFn: (targetPhotoId) => favoritePhotoApi(targetPhotoId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.favorites });
     },
   });
-  const unfavoriteMutation = useMutation({
-    mutationFn: (photoId) => unfavoritePhotoApi(photoId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.favorites });
-    },
-  });
+
+  const currentPhoto = photos[currentIndex];
+  const currentId = currentPhoto?._id?.toString?.() || currentPhoto?._id;
+
+  const sortedComments = useMemo(() => {
+    if (!currentPhoto) return [];
+    const arr = [...(currentPhoto.comments || [])];
+    arr.sort((a, b) => new Date(a.date_time) - new Date(b.date_time));
+    return arr;
+  }, [currentPhoto]);
 
   // Handle photo navigation
   useEffect(() => {
@@ -152,16 +170,6 @@ export default function UserPhotos() {
     }
   }, [photoId, photos]);
 
-  // If in gallery mode, scroll the selected photo into view
-  useEffect(() => {
-    if (!photos.length || !photoId) return;
-    if (advancedEnabled) return;
-    const el = document.getElementById(`photo-card-${photoId}`);
-    if (el && typeof el.scrollIntoView === 'function') {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [photos, photoId, advancedEnabled]);
-
   if (isLoading) {
     return <Typography sx={{ p: 2 }}>Loading...</Typography>;
   }
@@ -169,68 +177,45 @@ export default function UserPhotos() {
     return <Typography sx={{ p: 2 }}>No photos yet.</Typography>;
   }
 
+  // helpers for mentions
+  const mentionStyle = {
+    control: {
+      backgroundColor: '#fff',
+      minHeight: 44,
+      width: '100%',
+      border: '1px solid #e0e0e0',
+      borderRadius: 8,
+      padding: '8px 10px',
+    },
+    highlighter: { overflow: 'hidden' },
+    input: { margin: 0 },
+  };
+
+  const mentionUsers = users.map((u) => ({
+    id: u._id,
+    display: `${u.first_name} ${u.last_name}`,
+  }));
+
+  // Format date
+  const formatDateTime = (dt) => new Date(dt).toLocaleString();
+
+  // Add comment text setter
+  const setText = (photoKey, value) => setTextFor(photoKey, value);
+
   /* ---------- NORMAL GALLERY MODE ---------- */
   if (!advancedEnabled) {
     return (
       <Box className='gallery-container'>
         {photos.map((p) => (
-          <Paper
-            key={p._id}
-            id={`photo-card-${p._id}`}
-            elevation={2}
-            className='photo-card-modern'
-          >
+          <Paper key={p._id} elevation={2} className='photo-card-modern'>
             <img
               src={`/images/${p.file_name}`}
               alt='user upload'
               className='photo-img-modern'
             />
-            <Stack direction='row' justifyContent='space-between' alignItems='center'>
-              <Typography variant='caption' className='upload-time' sx={{ m: 0 }}>
-                Uploaded: {new Date(p.date_time).toLocaleString()}
-              </Typography>
-              <Stack direction='row' spacing={1} alignItems='center'>
-                <Button
-                  size='small'
-                  variant={p.likedByViewer ? 'contained' : 'outlined'}
-                  color={p.likedByViewer ? 'secondary' : 'primary'}
-                  sx={{ textTransform: 'none' }}
-                  disabled={likeMutation.isPending || unlikeMutation.isPending}
-                  onClick={() =>
-                    p.likedByViewer ? unlikeMutation.mutate(p._id) : likeMutation.mutate(p._id)
-                  }
-                  startIcon={p.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-                >
-                  {p.likedByViewer ? 'Unlike' : 'Like'}
-                </Button>
-                <Typography variant='body2' sx={{ color: '#555', minWidth: 24, textAlign: 'center' }}>
-                  {p.likesCount || 0}
-                </Typography>
-                <Button
-                  size='small'
-                  variant={p.favoritedByViewer ? 'contained' : 'outlined'}
-                  color={p.favoritedByViewer ? 'success' : 'inherit'}
-                  sx={{ textTransform: 'none' }}
-                  disabled={favoriteMutation.isPending || p.favoritedByViewer}
-                  onClick={() => favoriteMutation.mutate(p._id)}
-                >
-                  {p.favoritedByViewer ? 'Favorited' : 'Favorite'}
-                </Button>
-                {(currentUser &&
-                  ((p.user_id?.toString?.() || p.user_id) === currentUser._id)) ? (
-                  <Button
-                    size='small'
-                    variant='outlined'
-                    color='error'
-                    sx={{ textTransform: 'none' }}
-                    disabled={deletePhotoMutation.isPending}
-                    onClick={() => setConfirmPhotoId(p._id)}
-                  >
-                    Delete Photo
-                  </Button>
-                ) : null}
-              </Stack>
-            </Stack>
+            <Typography variant='caption' className='upload-time'>
+              Uploaded: {formatDateTime(p.date_time)}
+            </Typography>
 
             <Divider sx={{ my: 1 }} />
 
@@ -248,7 +233,7 @@ export default function UserPhotos() {
                     {c.user.first_name[0]}
                     {c.user.last_name[0]}
                   </Avatar>
-                  <Box sx={{ flex: 1 }}>
+                  <Box>
                     <Typography variant='body2' className='comment-header'>
                       <Link
                         to={`/users/${c.user._id}`}
@@ -256,21 +241,12 @@ export default function UserPhotos() {
                       >
                         {c.user.first_name} {c.user.last_name}
                       </Link>{' '}
-                      · {new Date(c.date_time).toLocaleString()}
+                      · {formatDateTime(c.date_time)}
                     </Typography>
                     <Typography variant='body2' className='comment-text'>
                       {c.comment}
                     </Typography>
                   </Box>
-                  {(currentUser && c.user._id === currentUser._id) ? (
-                    <IconButton
-                      aria-label='Delete comment'
-                      size='small'
-                      onClick={() => setConfirmComment({ photoId: p._id, commentId: c._id })}
-                    >
-                      <DeleteOutlineIcon fontSize='small' />
-                    </IconButton>
-                  ) : null}
                 </Stack>
               </Box>
             ))}
@@ -279,43 +255,22 @@ export default function UserPhotos() {
                 <Box sx={{ flex: 1 }}>
                   <MentionsInput
                     value={newComments[p._id] || ''}
-                    onChange={(e) => setTextFor(p._id, e.target.value)}
-                    placeholder='Add a comment... Use @ to mention'
-                    style={{
-                      control: {
-                        fontSize: 14,
-                        minHeight: 38,
-                        border: '1px solid #ccc',
-                        borderRadius: 4,
-                      },
-                      input: { padding: 8 },
-                      highlighter: { padding: 8 },
-                      suggestions: {
-                        list: {
-                          backgroundColor: 'white',
-                          border: '1px solid rgba(0,0,0,0.15)',
-                          borderRadius: 6,
-                        },
-                        item: {
-                          padding: '5px 10px',
-                          borderBottom: '1px solid #eee',
-                        },
-                      },
-                    }}
+                    onChange={(e) => setText(p._id, e.target.value)}
+                    style={mentionStyle}
+                    placeholder='Add a comment (@name to mention)...'
                   >
                     <Mention
                       trigger='@'
-                      data={mentionData}
+                      data={mentionUsers}
+                      style={{ backgroundColor: '#cee4ff' }}
                       markup='@[__display__](__id__)'
-                      displayTransform={(id, display) => `@${display}`}
                     />
                   </MentionsInput>
                 </Box>
                 <Button
                   variant='contained'
                   disabled={
-                    addCommentMutation.isPending ||
-                    !(newComments[p._id] || '').trim()
+                    addCommentMutation.isPending || !(newComments[p._id] || '').trim()
                   }
                   onClick={() => {
                     addCommentMutation.mutate(
@@ -324,7 +279,7 @@ export default function UserPhotos() {
                         comment: (newComments[p._id] || '').trim(),
                       },
                       {
-                        onSuccess: () => setTextFor(p._id, ''),
+                        onSuccess: () => setText(p._id, ''),
                       }
                     );
                   }}
@@ -338,29 +293,74 @@ export default function UserPhotos() {
                 </Typography>
               ) : null}
             </Box>
+            <Divider sx={{ my: 1 }} />
+            <Stack direction='row' spacing={1} alignItems='center'>
+              <Stack direction='row' spacing={1} alignItems='center'>
+                <Button
+                  size='small'
+                  variant={p.likedByViewer ? 'contained' : 'outlined'}
+                  color={p.likedByViewer ? 'secondary' : 'primary'}
+                  sx={{ textTransform: 'none' }}
+                  disabled={likeMutation.isPending || unlikeMutation.isPending}
+                  onClick={() => {
+                    if (p.likedByViewer) {
+                      unlikeMutation.mutate(p._id);
+                    } else {
+                      likeMutation.mutate(p._id);
+                    }
+                  }}
+                  startIcon={p.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />}
+                >
+                  {p.likedByViewer ? 'Unlike' : 'Like'}
+                </Button>
+                <Typography variant='body2' sx={{ color: '#555', minWidth: 24, textAlign: 'center' }}>
+                  {p.likesCount || 0}
+                </Typography>
+                <Button
+                  size='small'
+                  variant={p.favoritedByViewer ? 'contained' : 'outlined'}
+                  color={p.favoritedByViewer ? 'success' : 'inherit'}
+                  sx={{ textTransform: 'none' }}
+                  disabled={favoriteMutation.isPending || p.favoritedByViewer}
+                  onClick={() => favoriteMutation.mutate(p._id)}
+                >
+                  {p.favoritedByViewer ? 'Favorited' : 'Favorite'}
+                </Button>
+                {currentUser && (p.user_id?.toString?.() || p.user_id) === currentUser._id ? (
+                  <Button
+                    size='small'
+                    variant='outlined'
+                    color='error'
+                    sx={{ textTransform: 'none' }}
+                    disabled={deletePhotoMutation.isPending}
+                    onClick={() => setConfirmPhotoId(p._id)}
+                  >
+                    Delete Photo
+                  </Button>
+                ) : null}
+              </Stack>
+            </Stack>
           </Paper>
         ))}
-        {/* Confirmations - gallery mode */}
         <ConfirmDialog
           open={Boolean(confirmPhotoId)}
           title='Delete Photo'
-          description='This will permanently delete the photo and its comments.'
+          description='Are you sure you want to delete this photo?'
           confirmText='Delete'
           confirmColor='error'
-          loading={deletePhotoMutation.isPending}
+          loading={deletePhotoMutation?.isPending}
           onCancel={() => setConfirmPhotoId(null)}
-          onConfirm={() => confirmPhotoId && deletePhotoMutation.mutate(confirmPhotoId)}
+          onConfirm={() => deletePhotoMutation.mutate(confirmPhotoId)}
         />
         <ConfirmDialog
           open={Boolean(confirmComment)}
           title='Delete Comment'
-          description='This will permanently delete your comment.'
+          description='Are you sure you want to delete this comment?'
           confirmText='Delete'
           confirmColor='error'
-          loading={deleteCommentMutation.isPending}
+          loading={deleteCommentMutation?.isPending}
           onCancel={() => setConfirmComment(null)}
           onConfirm={() =>
-            confirmComment &&
             deleteCommentMutation.mutate({
               photoId: confirmComment.photoId,
               commentId: confirmComment.commentId,
@@ -395,21 +395,6 @@ export default function UserPhotos() {
       <Paper elevation={0} className='viewer-split-card'>
         {/* LEFT — Photo */}
         <Box className='viewer-photo-box'>
-          {(currentUser &&
-            ((photo.user_id?.toString?.() || photo.user_id) === currentUser._id)) ? (
-            <Box sx={{ position: 'absolute', top: 10, right: 10 }}>
-              <Button
-                size='small'
-                variant='outlined'
-                color='error'
-                sx={{ textTransform: 'none' }}
-                disabled={deletePhotoMutation.isPending}
-                onClick={() => setConfirmPhotoId(photo._id)}
-              >
-                Delete Photo
-              </Button>
-            </Box>
-          ) : null}
           <img
             src={`/images/${photo.file_name}`}
             alt='user upload'
@@ -418,283 +403,174 @@ export default function UserPhotos() {
 
           {/* Navigation footer */}
           <Box className='viewer-nav-footer'>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'auto 1fr auto',
-                alignItems: 'center',
-                columnGap: 3,
-                width: '90%',
-                margin: '0 auto',
-              }}
+            <Stack
+              direction='row'
+              spacing={2}
+              justifyContent='center'
+              alignItems='center'
             >
-              {/* Left: Like + count (no absolute positioning) */}
-              <Stack direction='row' spacing={1} alignItems='center' sx={{ whiteSpace: 'nowrap' }}>
-                <Button
-                  size='small'
-                  variant={photo.likedByViewer ? 'contained' : 'outlined'}
-                  color={photo.likedByViewer ? 'secondary' : 'primary'}
-                  sx={{ textTransform: 'none' }}
-                  disabled={likeMutation.isPending || unlikeMutation.isPending}
-                  onClick={() =>
-                    photo.likedByViewer ? unlikeMutation.mutate(photo._id) : likeMutation.mutate(photo._id)
-                  }
-                  startIcon={photo.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-                >
-                  {photo.likedByViewer ? 'Unlike' : 'Like'}
-                </Button>
-                <Typography variant='body2' sx={{ color: '#555' }}>
-                  {photo.likesCount || 0}
-                </Typography>
-                <Button
-                  size='small'
-                  variant={photo.favoritedByViewer ? 'contained' : 'outlined'}
-                  color={photo.favoritedByViewer ? 'success' : 'inherit'}
-                  sx={{ textTransform: 'none' }}
-                  disabled={favoriteMutation.isPending || photo.favoritedByViewer}
-                  onClick={() => favoriteMutation.mutate(photo._id)}
-                >
-                  {photo.favoritedByViewer ? 'Favorited' : 'Favorite'}
-                </Button>
-              </Stack>
-
-              {/* Center: Prev / index / Next */}
-              <Stack
-                direction='row'
-                spacing={2}
-                alignItems='center'
-                justifyContent='center'
-                sx={{ whiteSpace: 'nowrap', justifySelf: 'center' }}
+              <Button
+                variant='outlined'
+                onClick={handlePrev}
+                disabled={currentIndex === 0}
               >
-                <Button
-                  variant='outlined'
-                  onClick={handlePrev}
-                  disabled={currentIndex === 0}
-                  sx={{
-                    textTransform: 'none',
-                    borderColor: '#bbb',
-                    color: '#333',
-                    fontWeight: 500,
-                    px: 3,
-                    '&:hover': { backgroundColor: '#f2f2f2' },
-                    '&:disabled': { color: '#999', borderColor: '#ddd' },
-                  }}
-                >
-                  ← Prev
-                </Button>
-                <Typography
-                  variant='body2'
-                  sx={{ color: '#555', fontWeight: 500, minWidth: 50, textAlign: 'center' }}
-                >
-                  {currentIndex + 1} / {photos.length}
-                </Typography>
-                <Button
-                  variant='outlined'
-                  onClick={handleNext}
-                  disabled={currentIndex === photos.length - 1}
-                  sx={{
-                    textTransform: 'none',
-                    borderColor: '#bbb',
-                    color: '#333',
-                    fontWeight: 500,
-                    px: 3,
-                    '&:hover': { backgroundColor: '#f2f2f2' },
-                    '&:disabled': { color: '#999', borderColor: '#ddd' },
-                  }}
-                >
-                  Next →
-                </Button>
-              </Stack>
-
-              {/* Right spacer to balance layout */}
-              <Box />
-            </Box>
+                Prev
+              </Button>
+              <Typography variant='body2'>
+                {currentIndex + 1} / {photos.length}
+              </Typography>
+              <Button
+                variant='outlined'
+                onClick={handleNext}
+                disabled={currentIndex === photos.length - 1}
+              >
+                Next
+              </Button>
+            </Stack>
           </Box>
         </Box>
 
         {/* RIGHT — Comments */}
         <Box className='viewer-comments-box'>
-          <Typography
-            variant='h6'
-            sx={{
-              fontWeight: 600,
-              color: '#1976d2',
-              mb: 1,
-            }}
-          >
-            💬 Comments
+          <Typography variant='h6' gutterBottom>
+            Photo Details
+          </Typography>
+          <Typography variant='body2' color='text.secondary' paragraph>
+            Uploaded: {formatDateTime(photo.date_time)}
           </Typography>
 
-          <Typography variant='caption' sx={{ color: '#666' }}>
-            Uploaded: {new Date(photo.date_time).toLocaleString()}
+          <Divider sx={{ marginY: 2 }} />
+          <Typography variant='h6' gutterBottom>
+            Comments ({photo.comments?.length || 0})
           </Typography>
-
-          <Divider sx={{ my: 1 }} />
 
           <Box className='comments-scroll-area'>
-            {photo.comments?.length ? (
-              photo.comments.map((c) => (
-                <Box key={c._id} className='comment-bubble'>
-                  <Stack direction='row' spacing={1.5}>
-                    <Avatar
-                      sx={{
-                        bgcolor: '#1976d2',
-                        width: 30,
-                        height: 30,
-                        fontSize: '0.8rem',
-                      }}
-                    >
-                      {c.user.first_name[0]}
-                      {c.user.last_name[0]}
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography
-                        variant='body2'
-                        sx={{
-                          fontWeight: 600,
-                          color: '#1976d2',
-                          lineHeight: 1.2,
-                        }}
+            {sortedComments.map((c) => (
+              <Box key={c._id} className='comment-bubble'>
+                <Stack direction='row' spacing={1} alignItems='flex-start'>
+                  <Avatar
+                    sx={{
+                      bgcolor: '#1976d2',
+                      width: 28,
+                      height: 28,
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    {c.user?.first_name?.[0]}
+                    {c.user?.last_name?.[0]}
+                  </Avatar>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant='body2' className='comment-header'>
+                      <Link
+                        to={`/users/${c.user?._id}`}
+                        className='comment-user'
                       >
-                        <Link
-                          to={`/users/${c.user._id}`}
-                          className='comment-user'
-                        >
-                          {c.user.first_name} {c.user.last_name}
-                        </Link>
-                      </Typography>
-                      <Typography
-                        variant='caption'
-                        sx={{ color: '#888', display: 'block' }}
-                      >
-                        {new Date(c.date_time).toLocaleString()}
-                      </Typography>
-                      <Typography
-                        variant='body2'
-                        sx={{ mt: 0.5, color: '#333' }}
-                      >
-                        {c.comment}
-                      </Typography>
-                    </Box>
-                    {(currentUser && c.user._id === currentUser._id) ? (
+                        {c.user?.first_name} {c.user?.last_name}
+                      </Link>{' '}
+                      · {formatDateTime(c.date_time)}
+                    </Typography>
+                    <Typography variant='body2' className='comment-text'>
+                      {c.comment}
+                    </Typography>
+                    {(currentUser && c.user && c.user._id === currentUser._id) ? (
                       <IconButton
-                        aria-label='Delete comment'
                         size='small'
-                        onClick={() => {
-                          // eslint-disable-next-line no-alert
-                          if (window.confirm('Delete this comment?')) {
-                            deleteCommentMutation.mutate({
-                              photoId: photo._id,
-                              commentId: c._id,
-                            });
-                          }
-                        }}
+                        color='error'
+                        onClick={() =>
+                          setConfirmComment({
+                            photoId: photo._id,
+                            commentId: c._id,
+                          })
+                        }
                       >
                         <DeleteOutlineIcon fontSize='small' />
                       </IconButton>
                     ) : null}
-                  </Stack>
-                </Box>
-              ))
-            ) : (
-              <Typography variant='body2' sx={{ color: '#666', mt: 2 }}>
-                No comments yet.
-              </Typography>
-            )}
-          </Box>
-          <Box sx={{ mt: 1 }}>
-            <Stack direction='row' spacing={1}>
-              <Box sx={{ flex: 1 }}>
-                <MentionsInput
-                  value={newComments[photo._id] || ''}
-                  onChange={(e) => setTextFor(photo._id, e.target.value)}
-                  placeholder='Add a comment... Use @ to mention'
-                  style={{
-                    control: {
-                      fontSize: 14,
-                      minHeight: 38,
-                      border: '1px solid #ccc',
-                      borderRadius: 4,
-                    },
-                    input: { padding: 8 },
-                    highlighter: { padding: 8 },
-                    suggestions: {
-                      list: {
-                        backgroundColor: 'white',
-                        border: '1px solid rgba(0,0,0,0.15)',
-                        borderRadius: 6,
-                      },
-                      item: {
-                        padding: '5px 10px',
-                        borderBottom: '1px solid #eee',
-                      },
-                    },
-                  }}
-                >
-                  <Mention
-                    trigger='@'
-                    data={mentionData}
-                    markup='@[__display__](__id__)'
-                    displayTransform={(id, display) => `@${display}`}
-                  />
-                </MentionsInput>
+                  </Box>
+                </Stack>
               </Box>
+            ))}
+          </Box>
+
+          <Box sx={{ mt: 2 }}>
+            <Box sx={{ flex: 1 }}>
+              <MentionsInput
+                value={newComments[currentId] || ''}
+                onChange={(e) => setText(currentId, e.target.value)}
+                style={mentionStyle}
+                placeholder='Add a comment (@name to mention)...'
+              >
+                <Mention
+                  trigger='@'
+                  data={mentionUsers}
+                  style={{ backgroundColor: '#cee4ff' }}
+                  markup='@[__display__](__id__)'
+                />
+              </MentionsInput>
+            </Box>
+            <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}>
               <Button
                 variant='contained'
                 disabled={
-                  addCommentMutation.isPending ||
-                  !(newComments[photo._id] || '').trim()
+                  addCommentMutation.isPending || !(newComments[currentId] || '').trim()
                 }
                 onClick={() => {
                   addCommentMutation.mutate(
                     {
                       photoId: photo._id,
-                      comment: (newComments[photo._id] || '').trim(),
+                      comment: (newComments[currentId] || '').trim(),
                     },
                     {
-                      onSuccess: () => setTextFor(photo._id, ''),
+                      onSuccess: () => setText(currentId, ''),
                     }
                   );
                 }}
               >
                 Post
               </Button>
+              {addCommentMutation.isError ? (
+                <Typography variant='caption' color='error'>
+                  Failed to add comment
+                </Typography>
+              ) : null}
             </Stack>
-            {addCommentMutation.isError ? (
-              <Typography variant='caption' color='error'>
-                Failed to add comment
-              </Typography>
-            ) : null}
           </Box>
+
+          <Divider sx={{ marginY: 2 }} />
+          <Stack direction='row' spacing={1} alignItems='center' sx={{ whiteSpace: 'nowrap' }}>
+            <Button
+              size='small'
+              variant={photo.likedByViewer ? 'contained' : 'outlined'}
+              color={photo.likedByViewer ? 'secondary' : 'primary'}
+              sx={{ textTransform: 'none' }}
+              disabled={likeMutation.isPending || unlikeMutation.isPending}
+              onClick={() => {
+                if (photo.likedByViewer) {
+                  unlikeMutation.mutate(photo._id);
+                } else {
+                  likeMutation.mutate(photo._id);
+                }
+              }}
+              startIcon={photo.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />}
+            >
+              {photo.likedByViewer ? 'Unlike' : 'Like'}
+            </Button>
+            <Typography variant='body2' sx={{ color: '#555' }}>
+              {photo.likesCount || 0}
+            </Typography>
+            <Button
+              size='small'
+              variant={photo.favoritedByViewer ? 'contained' : 'outlined'}
+              color={photo.favoritedByViewer ? 'success' : 'inherit'}
+              sx={{ textTransform: 'none' }}
+              disabled={favoriteMutation.isPending || photo.favoritedByViewer}
+              onClick={() => favoriteMutation.mutate(photo._id)}
+            >
+              {photo.favoritedByViewer ? 'Favorited' : 'Favorite'}
+            </Button>
+          </Stack>
         </Box>
       </Paper>
-      {/* Confirmations - advanced mode */}
-      <ConfirmDialog
-        open={Boolean(confirmPhotoId)}
-        title='Delete Photo'
-        description='This will permanently delete the photo and its comments.'
-        confirmText='Delete'
-        confirmColor='error'
-        loading={deletePhotoMutation.isPending}
-        onCancel={() => setConfirmPhotoId(null)}
-        onConfirm={() => confirmPhotoId && deletePhotoMutation.mutate(confirmPhotoId)}
-      />
-      <ConfirmDialog
-        open={Boolean(confirmComment)}
-        title='Delete Comment'
-        description='This will permanently delete your comment.'
-        confirmText='Delete'
-        confirmColor='error'
-        loading={deleteCommentMutation.isPending}
-        onCancel={() => setConfirmComment(null)}
-        onConfirm={() =>
-          confirmComment &&
-          deleteCommentMutation.mutate({
-            photoId: confirmComment.photoId,
-            commentId: confirmComment.commentId,
-          })
-        }
-      />
     </Box>
   );
 }

@@ -23,7 +23,7 @@ export async function addCommentToPhoto(req, res) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
     // Extract react-mentions markup: @[display](id)
-    const mentionMatches = [...trimmed.matchAll(/\@\[([^\]]+)\]\(([^\)]+)\)/g)];
+    const mentionMatches = [...trimmed.matchAll(/@\[([^\]]+)\]\(([^)]+)\)/g)];
     const mentionedIds = mentionMatches
       .map((m) => m[2])
       .filter((id) => mongoose.Types.ObjectId.isValid(id));
@@ -36,7 +36,7 @@ export async function addCommentToPhoto(req, res) {
       validMentionIds = validUsers.map((u) => u._id);
     }
     // Store clean text that displays as "@Name"
-    const displayText = trimmed.replace(/\@\[([^\]]+)\]\(([^\)]+)\)/g, '@$1');
+    const displayText = trimmed.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
     // Atomically push comment to avoid mutating other fields
     await Photo.updateOne(
       { _id: photo_id },
