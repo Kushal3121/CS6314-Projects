@@ -1,15 +1,15 @@
-import mongoose from 'mongoose';
-import User from '../schema/user.js';
-import Photo from '../schema/photo.js';
-import Activity from '../schema/activity.js';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import fs from 'fs';
+import mongoose from 'mongoose';
+import Activity from '../schema/activity.js';
+import Photo from '../schema/photo.js';
+import User from '../schema/user.js';
+import { logActivity } from './activityController.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = dirname(__dirname);
-import { logActivity } from './activityController.js';
 
 export async function register(req, res) {
   try {

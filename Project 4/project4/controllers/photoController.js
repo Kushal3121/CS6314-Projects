@@ -94,6 +94,7 @@ export async function uploadPhoto(req, res) {
 export async function getPhotosOfUser(req, res) {
   const { id } = req.params;
   try {
+    const includeMeta = req.query.meta === '1';
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid user id' });
     }
@@ -144,11 +145,6 @@ export async function getPhotosOfUser(req, res) {
       return res.status(200).json([]);
     }
 
-    const me = sessionUserId
-      ? await User.findById(sessionUserId, 'favorites').lean()
-      : null;
-    const favIds = (me?.favorites || []).map((x) => x?.toString?.() || x) || [];
-
     const populationPromises = photos.map(async (photo) => {
       const commentPromises = (photo.comments || []).map(async (comment) => {
         const commenterId = comment.user_id?.toString?.() || comment.user_id;
@@ -158,9 +154,19 @@ export async function getPhotosOfUser(req, res) {
         ).lean();
         comment.user = user || null;
         delete comment.user_id;
+        delete comment.mentions;
       });
       await Promise.all(commentPromises);
-      // likes metadata
+      if (!includeMeta) {
+        delete photo.likes;
+        return;
+      }
+
+      const me = sessionUserId
+        ? await User.findById(sessionUserId, 'favorites').lean()
+        : null;
+      const favIds = (me?.favorites || []).map((x) => x?.toString?.() || x) || [];
+
       const likesArray = photo.likes || [];
       photo.likesCount = Array.isArray(likesArray) ? likesArray.length : 0;
       if (sessionUserId) {
@@ -170,7 +176,6 @@ export async function getPhotosOfUser(req, res) {
       } else {
         photo.likedByViewer = false;
       }
-      // favorite metadata
       photo.favoritedByViewer = favIds.includes(
         photo._id?.toString?.() || photo._id
       );
@@ -178,14 +183,15 @@ export async function getPhotosOfUser(req, res) {
     });
     await Promise.all(populationPromises);
 
-    // Sort by likes desc, then date_time desc
-    photos.sort((a, b) => {
-      const likeDiff = (b.likesCount || 0) - (a.likesCount || 0);
-      if (likeDiff !== 0) return likeDiff;
-      const aTime = new Date(a.date_time).getTime();
-      const bTime = new Date(b.date_time).getTime();
-      return bTime - aTime;
-    });
+    if (includeMeta) {
+      photos.sort((a, b) => {
+        const likeDiff = (b.likesCount || 0) - (a.likesCount || 0);
+        if (likeDiff !== 0) return likeDiff;
+        const aTime = new Date(a.date_time).getTime();
+        const bTime = new Date(b.date_time).getTime();
+        return bTime - aTime;
+      });
+    }
 
     return res.status(200).json(photos);
   } catch (err) {
@@ -239,19 +245,6 @@ export async function deletePhoto(req, res) {
     console.error('Error in DELETE /photos/:photo_id:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
-}
-
-function buildVisibilityFilterForPhoto(viewerObj) {
-  if (!viewerObj) {
-    // Only public or seeded special case will be considered by caller if needed
-    return { shared_with: { $exists: false } };
-  }
-  return {
-    $or: [
-      { shared_with: { $exists: false } },
-      { shared_with: { $in: [viewerObj] } },
-    ],
-  };
 }
 
 export async function likePhoto(req, res) {

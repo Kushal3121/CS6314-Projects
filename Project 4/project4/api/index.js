@@ -31,7 +31,9 @@ export const fetchUserById = async (userId) => {
 };
 
 export const fetchPhotosOfUser = async (userId) => {
-  const { data } = await apiClient.get(`/photosOfUser/${userId}`);
+  const { data } = await apiClient.get(`/photosOfUser/${userId}`, {
+    params: { meta: 1 },
+  });
   return data;
 };
 

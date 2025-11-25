@@ -53,21 +53,24 @@
 
 /* ===== COMMENTS ===== */
 .comment-modern {
-  background: #f8f9fa;
-  border-radius: 10px;
-  padding: 10px 14px;
-  margin-top: 10px;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.95), rgba(243, 246, 255, 0.85));
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-top: 14px;
+  border: 1px solid rgba(16, 30, 70, 0.08);
+  box-shadow: 0 12px 28px rgba(13, 16, 38, 0.08);
 }
 
 .comment-header {
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: #0f1d2d;
+  margin-bottom: 4px;
 }
 
 .comment-user {
-  color: #1976d2;
+  color: #ff6f61;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .comment-user:hover {
@@ -75,8 +78,9 @@
 }
 
 .comment-text {
-  color: #444;
-  margin-top: 3px;
+  color: #1f2341;
+  margin-top: 6px;
+  line-height: 1.5;
 }
 
 /* ====== ADVANCED MODE SPLIT VIEW ====== */
@@ -132,19 +136,22 @@
 
 /* Comment bubble */
 .comment-bubble {
-  background: #f1f3f5;
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
+  border-radius: 18px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .comment-bubble:hover {
-  background: #e9eef2;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
 }
 
 .comment-user {
-  color: #1976d2;
+  color: #ff6f61;
   text-decoration: none;
+  font-weight: 700;
 }
 
 .comment-user:hover {
