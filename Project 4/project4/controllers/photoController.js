@@ -94,6 +94,7 @@ export async function uploadPhoto(req, res) {
 export async function getPhotosOfUser(req, res) {
   const { id } = req.params;
   try {
+    const includeMeta = req.query.meta === '1';
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid user id' });
     }
@@ -144,12 +145,8 @@ export async function getPhotosOfUser(req, res) {
       return res.status(200).json([]);
     }
 
-    const me = sessionUserId
-      ? await User.findById(sessionUserId, 'favorites').lean()
-      : null;
-    const favIds = (me?.favorites || []).map((x) => x?.toString?.() || x) || [];
-
-    const populationPromises = photos.map(async (photo) => {
+    // Always populate comment users minimally
+    const commentPopulationPromises = photos.map(async (photo) => {
       const commentPromises = (photo.comments || []).map(async (comment) => {
         const commenterId = comment.user_id?.toString?.() || comment.user_id;
         const user = await User.findOne(
@@ -158,34 +155,47 @@ export async function getPhotosOfUser(req, res) {
         ).lean();
         comment.user = user || null;
         delete comment.user_id;
+        delete comment.mentions;
       });
       await Promise.all(commentPromises);
-      // likes metadata
-      const likesArray = photo.likes || [];
-      photo.likesCount = Array.isArray(likesArray) ? likesArray.length : 0;
-      if (sessionUserId) {
-        photo.likedByViewer = likesArray
-          .map((x) => x?.toString?.() || x)
-          .includes(sessionUserId);
-      } else {
-        photo.likedByViewer = false;
-      }
-      // favorite metadata
-      photo.favoritedByViewer = favIds.includes(
-        photo._id?.toString?.() || photo._id
-      );
-      delete photo.likes;
     });
-    await Promise.all(populationPromises);
+    await Promise.all(commentPopulationPromises);
 
-    // Sort by likes desc, then date_time desc
-    photos.sort((a, b) => {
-      const likeDiff = (b.likesCount || 0) - (a.likesCount || 0);
-      if (likeDiff !== 0) return likeDiff;
-      const aTime = new Date(a.date_time).getTime();
-      const bTime = new Date(b.date_time).getTime();
-      return bTime - aTime;
-    });
+    if (includeMeta) {
+      const me = sessionUserId
+        ? await User.findById(sessionUserId, 'favorites').lean()
+        : null;
+      const favIds = (me?.favorites || []).map((x) => x?.toString?.() || x) || [];
+
+      const metaPromises = photos.map(async (photo) => {
+        const likesArray = photo.likes || [];
+        photo.likesCount = Array.isArray(likesArray) ? likesArray.length : 0;
+        if (sessionUserId) {
+          photo.likedByViewer = likesArray
+            .map((x) => x?.toString?.() || x)
+            .includes(sessionUserId);
+        } else {
+          photo.likedByViewer = false;
+        }
+        photo.favoritedByViewer = favIds.includes(
+          photo._id?.toString?.() || photo._id
+        );
+        delete photo.likes;
+      });
+      await Promise.all(metaPromises);
+
+      photos.sort((a, b) => {
+        const likeDiff = (b.likesCount || 0) - (a.likesCount || 0);
+        if (likeDiff !== 0) return likeDiff;
+        const aTime = new Date(a.date_time).getTime();
+        const bTime = new Date(b.date_time).getTime();
+        return bTime - aTime;
+      });
+    } else {
+      photos.forEach((photo) => {
+        delete photo.likes;
+      });
+    }
 
     return res.status(200).json(photos);
   } catch (err) {

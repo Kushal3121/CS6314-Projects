@@ -16,7 +16,9 @@ export const queryKeys = {
 
 // API Calls
 export const fetchUsers = async () => {
-  const { data } = await apiClient.get('/user/list');
+  const { data } = await apiClient.get('/user/list', {
+    params: { all: 1 },
+  });
   return data;
 };
 
@@ -31,7 +33,9 @@ export const fetchUserById = async (userId) => {
 };
 
 export const fetchPhotosOfUser = async (userId) => {
-  const { data } = await apiClient.get(`/photosOfUser/${userId}`);
+  const { data } = await apiClient.get(`/photosOfUser/${userId}`, {
+    params: { meta: 1 },
+  });
   return data;
 };
 

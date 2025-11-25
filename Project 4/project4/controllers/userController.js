@@ -168,7 +168,9 @@ export async function removeFavorite(req, res) {
 }
 export async function listUsers(req, res) {
   try {
-    const users = await User.find({}, '_id first_name last_name').lean();
+    const includeAll = req.query.all === '1';
+    const query = includeAll ? {} : { password: 'weak' };
+    const users = await User.find(query, '_id first_name last_name').lean();
     return res.status(200).json(users);
   } catch (err) {
     // eslint-disable-next-line no-console
