@@ -1,47 +1,73 @@
-Project 4 - Submission Form
+----------------------------------------------------- Project 4 - Submission Form -----------------------------------------------------
 
-Please fill in this form and submit it with your Project 4.
-
-Enter no more than 6 user stories that you did for the assignment
-that you would like to be graded on. 
-Additionally, specify the story for which you implemented real-time updates.
-
-For each story include the following information:
-
-Story number and name:
-Story points:
+Story number and name: 1 - Extend user profile detail with usage
+Story points: 3
 Brief description to see the story in action:
+- Go to any user's Detail page. In the "Usage" section you will see:
+  - Most Recent photo: thumbnail + upload date.
+  - Most Commented photo: thumbnail + comments count.
+- Clicking either thumbnail navigates to the user's Photos view with that photo visible (and comments shown).
+- Back end: GET /user/:id/highlights returns mostRecent and mostCommented; front end consumes it via fetchUserHighlights.
 
-Total Story Points:
+Story number and name: 2 - @mentions in comments
+Story points: 6
+Brief description to see the story in action:
+- Go to any user's Photos page. In the "Add a comment" box use @ to open user suggestions (React Mentions).
+- Select a user to insert a structured @mention. Only existing users can be selected; invalid users cannot be @mentioned.
+- Post the comment. The backend extracts and stores mention user IDs with the photo.
+- Visit a user's Detail page to see "Photos that @mention this user": thumbnails link to the photo on the owner's photos page; owner name links to owner detail.
+
+Story number and name: 4 - Activity feed
+Story points: 4
+Brief description to see the story in action:
+- Click "Activities" in the top bar. Shows 5 most recent activities (newest first) with type labels.
+- Photo upload and comment activities include a thumbnail. Register/Login/Logout show without extra data.
+- Has a Refresh button; related actions in the app also invalidate and refresh the feed.
+
+Story number and name: 5 - Deleting comments, photos, and users
+Story points: 4
+Brief description to see the story in action:
+- On a photo you own, click "Delete Photo" to remove it (and related activities).
+- For your own comments, click the trash icon to delete.
+- In account settings, delete your account (destroys user, photos, comments, activities) and logs out.
+
+Story number and name: 6 - Photo "like" votes
+Story points: 4
+Brief description to see the story in action:
+- Click Like to toggle to Unlike; count updates immediately and button reflects state.
+- If already liked by viewer, shows "Unlike" and visual indication.
+- User Photos page sorted by likes desc, then date desc.
+
+Story number and name: 7 - Favorite list of photos
+Story points: 6
+Brief description to see the story in action:
+- Click Favorite on any photo. Visit /favorites to see your thumbnails (modal opens on click) with date caption.
+- Favorited state persists in DB; can remove from the list.
+- Favorites nav shown only when logged in.
+
+Total Story Points: 27
+
+-------------------------------------------------- Real-Time Updates using Sockets --------------------------------------------------
+
+Chosen story for real-time updates: 6 - Photo "like" votes (10 points)
+Behavior:
+- When any user clicks Like/Unlike on a photo, the like count updates in real-time for all users currently viewing the page without refresh.
+Implementation notes:
+- socket.io broadcasts like updates: { photoId, likesCount, userId, liked }.
+- The client listens and updates the TanStack Query cache (`photosOfUser(:id)`) so button state and count update instantly.
+
+-------------------------------------------------------- Marketing Video URL --------------------------------------------------------
 
 Marketing Video URL (ensure permissions are set to public viewing):
+<add-public-video-link-here>
 
 Is it OK if we post your Marketing Video URL on the class discussion forum?
-[Yes/No]
+Yes
 
-Any special instructions for grading (it should be easy for someone to run your
-app from a new machine):
+-------------------------------------------------------- Special Instructions --------------------------------------------------------
 
-**************** Example **********************
-* As an example: if you did only story 5, your file would look like:
-* 
-* Story number and name:  5 - Activity Feed
-* Story points:  4
-* Brief description to see the story in action:
-* Push the button labeled Activity on the toolbar to view the 
-* 10 most recent activities of the current user.
-* 
-* Total Story Points: 4
-* 
-* Marketing Video URL (ensure permissions are set to public viewing):
-* http://www.youtube.com ---
-* 
-* Is it OK if we post your Marketing Video URL on the class discussion forum?
-* Yes
-* 
-* Any special instructions for grading (it should be easy 
-* for someone to run your app from a new machine):
-* None
-
-**************** Example **********************
-
+Any special instructions for grading (it should be easy for someone to run your app from a new machine):
+- Server: `npm run server` (port 3001).
+- Client: `npm install` then `npm run dev` (Vite on port 3000). Ensure CORS is http://localhost:3000.
+- Seeded users have password "weak". You can also register a new account.
+- Images are served from the server's /images folder.
