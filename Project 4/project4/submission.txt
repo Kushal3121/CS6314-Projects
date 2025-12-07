@@ -59,7 +59,7 @@ Implementation notes:
 -------------------------------------------------------- Marketing Video URL --------------------------------------------------------
 
 Marketing Video URL (ensure permissions are set to public viewing):
-<add-public-video-link-here>
+https://youtu.be/hptouZZcXc0
 
 Is it OK if we post your Marketing Video URL on the class discussion forum?
 Yes

@@ -395,6 +395,21 @@ export default function UserPhotos() {
       <Paper elevation={0} className='viewer-split-card'>
         {/* LEFT — Photo */}
         <Box className='viewer-photo-box'>
+          {currentUser &&
+          (photo.user_id?.toString?.() || photo.user_id) === currentUser._id ? (
+            <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 5 }}>
+              <Button
+                size='small'
+                variant='outlined'
+                color='error'
+                sx={{ textTransform: 'none' }}
+                disabled={deletePhotoMutation.isPending}
+                onClick={() => setConfirmPhotoId(photo._id)}
+              >
+                Delete Photo
+              </Button>
+            </Box>
+          ) : null}
           <img
             src={`/images/${photo.file_name}`}
             alt='user upload'
@@ -472,21 +487,22 @@ export default function UserPhotos() {
                     <Typography variant='body2' className='comment-text'>
                       {c.comment}
                     </Typography>
-                    {(currentUser && c.user && c.user._id === currentUser._id) ? (
-                      <IconButton
-                        size='small'
-                        color='error'
-                        onClick={() =>
-                          setConfirmComment({
-                            photoId: photo._id,
-                            commentId: c._id,
-                          })
-                        }
-                      >
-                        <DeleteOutlineIcon fontSize='small' />
-                      </IconButton>
-                    ) : null}
                   </Box>
+                  {(currentUser && c.user && c.user._id === currentUser._id) ? (
+                    <IconButton
+                      size='small'
+                      color='error'
+                      sx={{ alignSelf: 'flex-start', mt: 0.5 }}
+                      onClick={() =>
+                        setConfirmComment({
+                          photoId: photo._id,
+                          commentId: c._id,
+                        })
+                      }
+                    >
+                      <DeleteOutlineIcon fontSize='small' />
+                    </IconButton>
+                  ) : null}
                 </Stack>
               </Box>
             ))}
@@ -503,7 +519,7 @@ export default function UserPhotos() {
                 <Mention
                   trigger='@'
                   data={mentionUsers}
-                  style={{ backgroundColor: '#cee4ff' }}
+                  style={{ backgroundColor: 'transparent', color: 'inherit' }}
                   markup='@[__display__](__id__)'
                 />
               </MentionsInput>
@@ -571,6 +587,32 @@ export default function UserPhotos() {
           </Stack>
         </Box>
       </Paper>
+      {/* Confirmations - advanced mode */}
+      <ConfirmDialog
+        open={Boolean(confirmPhotoId)}
+        title='Delete Photo'
+        description='Are you sure you want to delete this photo?'
+        confirmText='Delete'
+        confirmColor='error'
+        loading={deletePhotoMutation?.isPending}
+        onCancel={() => setConfirmPhotoId(null)}
+        onConfirm={() => deletePhotoMutation.mutate(confirmPhotoId)}
+      />
+      <ConfirmDialog
+        open={Boolean(confirmComment)}
+        title='Delete Comment'
+        description='Are you sure you want to delete this comment?'
+        confirmText='Delete'
+        confirmColor='error'
+        loading={deleteCommentMutation?.isPending}
+        onCancel={() => setConfirmComment(null)}
+        onConfirm={() =>
+          deleteCommentMutation.mutate({
+            photoId: confirmComment.photoId,
+            commentId: confirmComment.commentId,
+          })
+        }
+      />
     </Box>
   );
 }
