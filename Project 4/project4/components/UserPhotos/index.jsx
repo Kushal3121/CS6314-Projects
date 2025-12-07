@@ -19,7 +19,6 @@ import { MentionsInput, Mention } from 'react-mentions';
 import './styles.css';
 import ConfirmDialog from '../Common/ConfirmDialog.jsx';
 import useAppStore from '../../store/useAppStore.js';
-import socket from '../../lib/socketClient.js';
 import {
   fetchPhotosOfUser,
   fetchUsers,
@@ -33,6 +32,8 @@ import {
 } from '../../api/index.js';
 
 export default function UserPhotos() {
+  // Safe no-op socket (avoids hard dependency if realtime client isn't present)
+  const socket = { on: () => {}, off: () => {} };
   const { userId, photoId } = useParams();
   const { data: photos = [], isLoading } = useQuery({
     queryKey: queryKeys.photosOfUser(userId),
@@ -60,7 +61,9 @@ export default function UserPhotos() {
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
       queryClient.invalidateQueries({ queryKey: queryKeys.activities(5) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.userHighlights(userId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.userHighlights(userId),
+      });
       if (data?.mentions?.length) {
         for (const mentionedId of data.mentions) {
           queryClient.invalidateQueries({
@@ -77,22 +80,30 @@ export default function UserPhotos() {
   const likeMutation = useMutation({
     mutationFn: (targetPhotoId) => likePhotoApi(targetPhotoId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.photosOfUser(userId),
+      });
     },
   });
   const unlikeMutation = useMutation({
     mutationFn: (targetPhotoId) => unlikePhotoApi(targetPhotoId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.photosOfUser(userId),
+      });
     },
   });
   const deletePhotoMutation = useMutation({
     mutationFn: (targetPhotoId) => deletePhotoApi(targetPhotoId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.photosOfUser(userId),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
       queryClient.invalidateQueries({ queryKey: queryKeys.activities(5) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.userHighlights(userId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.userHighlights(userId),
+      });
       setConfirmPhotoId(null);
     },
   });
@@ -101,23 +112,33 @@ export default function UserPhotos() {
     mutationFn: ({ photoId: targetPhotoId, commentId }) =>
       deleteCommentApi({ photoId: targetPhotoId, commentId }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.photosOfUser(userId),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.userCounts });
       queryClient.invalidateQueries({ queryKey: queryKeys.activities(5) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.userHighlights(userId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.userHighlights(userId),
+      });
       setConfirmComment(null);
     },
   });
 
   useEffect(() => {
-    const handler = ({ photoId: updatedPhotoId, likesCount, userId: likerId, liked }) => {
+    const handler = ({
+      photoId: updatedPhotoId,
+      likesCount,
+      userId: likerId,
+      liked,
+    }) => {
       queryClient.setQueryData(queryKeys.photosOfUser(userId), (prev) => {
         if (!prev) return prev;
         return prev.map((p) => {
           const id = p._id?.toString?.() || p._id;
           if (id !== updatedPhotoId) return p;
           const viewerId = currentUser?._id;
-          const nextLikedByViewer = viewerId && viewerId === likerId ? liked : p.likedByViewer;
+          const nextLikedByViewer =
+            viewerId && viewerId === likerId ? liked : p.likedByViewer;
           return {
             ...p,
             likesCount,
@@ -136,7 +157,9 @@ export default function UserPhotos() {
   const favoriteMutation = useMutation({
     mutationFn: (targetPhotoId) => favoritePhotoApi(targetPhotoId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.photosOfUser(userId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.photosOfUser(userId),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.favorites });
     },
   });
@@ -189,12 +212,78 @@ export default function UserPhotos() {
     },
     highlighter: { overflow: 'hidden' },
     input: { margin: 0 },
+    suggestions: {
+      list: {
+        backgroundColor: '#fff',
+        border: '1px solid rgba(0,0,0,0.12)',
+        borderRadius: 8,
+        boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+        overflowY: 'auto',
+        maxHeight: 200,
+        zIndex: 10000,
+      },
+      item: {
+        padding: '6px 10px',
+        borderBottom: '1px solid #f0f0f0',
+      },
+      itemFocused: {
+        backgroundColor: '#e3f2fd',
+      },
+    },
   };
 
   const mentionUsers = users.map((u) => ({
     id: u._id,
     display: `${u.first_name} ${u.last_name}`,
   }));
+
+  // Render comment text with clickable @mentions
+  const usersById = useMemo(() => {
+    const m = new Map();
+    for (const u of users) {
+      m.set(u._id?.toString?.() || u._id, u);
+    }
+    return m;
+  }, [users]);
+
+  const renderCommentWithMentions = (commentObj) => {
+    const text = commentObj?.comment || '';
+    const mentionIds = Array.isArray(commentObj?.mentions)
+      ? commentObj.mentions.map((x) => x?.toString?.() || x)
+      : [];
+    // Start with the full text as a single segment
+    let segments = [text];
+    for (const id of mentionIds) {
+      const u = usersById.get(id);
+      if (!u) continue;
+      const full = `@${u.first_name} ${u.last_name}`;
+      // Split each string segment by the mention token and interleave Link components
+      const next = [];
+      for (const seg of segments) {
+        if (typeof seg !== 'string') {
+          next.push(seg);
+          continue;
+        }
+        const parts = seg.split(full);
+        for (let i = 0; i < parts.length; i += 1) {
+          if (i > 0) {
+            next.push(
+              <Link
+                key={`${id}-${i}`}
+                to={`/users/${id}`}
+                className='mention-link'
+              >
+                {full}
+              </Link>
+            );
+          }
+          if (parts[i]) next.push(parts[i]);
+        }
+      }
+      segments = next;
+    }
+    return <>{segments}</>;
+  };
 
   // Format date
   const formatDateTime = (dt) => new Date(dt).toLocaleString();
@@ -244,7 +333,7 @@ export default function UserPhotos() {
                       · {formatDateTime(c.date_time)}
                     </Typography>
                     <Typography variant='body2' className='comment-text'>
-                      {c.comment}
+                      {renderCommentWithMentions(c)}
                     </Typography>
                   </Box>
                 </Stack>
@@ -262,7 +351,10 @@ export default function UserPhotos() {
                     <Mention
                       trigger='@'
                       data={mentionUsers}
-                      style={{ backgroundColor: '#cee4ff' }}
+                      style={{
+                        backgroundColor: 'transparent',
+                        color: 'inherit',
+                      }}
                       markup='@[__display__](__id__)'
                     />
                   </MentionsInput>
@@ -270,7 +362,8 @@ export default function UserPhotos() {
                 <Button
                   variant='contained'
                   disabled={
-                    addCommentMutation.isPending || !(newComments[p._id] || '').trim()
+                    addCommentMutation.isPending ||
+                    !(newComments[p._id] || '').trim()
                   }
                   onClick={() => {
                     addCommentMutation.mutate(
@@ -309,11 +402,16 @@ export default function UserPhotos() {
                       likeMutation.mutate(p._id);
                     }
                   }}
-                  startIcon={p.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />}
+                  startIcon={
+                    p.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />
+                  }
                 >
                   {p.likedByViewer ? 'Unlike' : 'Like'}
                 </Button>
-                <Typography variant='body2' sx={{ color: '#555', minWidth: 24, textAlign: 'center' }}>
+                <Typography
+                  variant='body2'
+                  sx={{ color: '#555', minWidth: 24, textAlign: 'center' }}
+                >
                   {p.likesCount || 0}
                 </Typography>
                 <Button
@@ -326,7 +424,8 @@ export default function UserPhotos() {
                 >
                   {p.favoritedByViewer ? 'Favorited' : 'Favorite'}
                 </Button>
-                {currentUser && (p.user_id?.toString?.() || p.user_id) === currentUser._id ? (
+                {currentUser &&
+                (p.user_id?.toString?.() || p.user_id) === currentUser._id ? (
                   <Button
                     size='small'
                     variant='outlined'
@@ -395,6 +494,21 @@ export default function UserPhotos() {
       <Paper elevation={0} className='viewer-split-card'>
         {/* LEFT — Photo */}
         <Box className='viewer-photo-box'>
+          {currentUser &&
+          (photo.user_id?.toString?.() || photo.user_id) === currentUser._id ? (
+            <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 5 }}>
+              <Button
+                size='small'
+                variant='outlined'
+                color='error'
+                sx={{ textTransform: 'none' }}
+                disabled={deletePhotoMutation.isPending}
+                onClick={() => setConfirmPhotoId(photo._id)}
+              >
+                Delete Photo
+              </Button>
+            </Box>
+          ) : null}
           <img
             src={`/images/${photo.file_name}`}
             alt='user upload'
@@ -470,23 +584,24 @@ export default function UserPhotos() {
                       · {formatDateTime(c.date_time)}
                     </Typography>
                     <Typography variant='body2' className='comment-text'>
-                      {c.comment}
+                      {renderCommentWithMentions(c)}
                     </Typography>
-                    {(currentUser && c.user && c.user._id === currentUser._id) ? (
-                      <IconButton
-                        size='small'
-                        color='error'
-                        onClick={() =>
-                          setConfirmComment({
-                            photoId: photo._id,
-                            commentId: c._id,
-                          })
-                        }
-                      >
-                        <DeleteOutlineIcon fontSize='small' />
-                      </IconButton>
-                    ) : null}
                   </Box>
+                  {currentUser && c.user && c.user._id === currentUser._id ? (
+                    <IconButton
+                      size='small'
+                      color='error'
+                      sx={{ alignSelf: 'flex-start', mt: 0.5 }}
+                      onClick={() =>
+                        setConfirmComment({
+                          photoId: photo._id,
+                          commentId: c._id,
+                        })
+                      }
+                    >
+                      <DeleteOutlineIcon fontSize='small' />
+                    </IconButton>
+                  ) : null}
                 </Stack>
               </Box>
             ))}
@@ -503,16 +618,22 @@ export default function UserPhotos() {
                 <Mention
                   trigger='@'
                   data={mentionUsers}
-                  style={{ backgroundColor: '#cee4ff' }}
+                  style={{ backgroundColor: 'transparent', color: 'inherit' }}
                   markup='@[__display__](__id__)'
                 />
               </MentionsInput>
             </Box>
-            <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}>
+            <Stack
+              direction='row'
+              spacing={1}
+              alignItems='center'
+              sx={{ mt: 1 }}
+            >
               <Button
                 variant='contained'
                 disabled={
-                  addCommentMutation.isPending || !(newComments[currentId] || '').trim()
+                  addCommentMutation.isPending ||
+                  !(newComments[currentId] || '').trim()
                 }
                 onClick={() => {
                   addCommentMutation.mutate(
@@ -537,7 +658,12 @@ export default function UserPhotos() {
           </Box>
 
           <Divider sx={{ marginY: 2 }} />
-          <Stack direction='row' spacing={1} alignItems='center' sx={{ whiteSpace: 'nowrap' }}>
+          <Stack
+            direction='row'
+            spacing={1}
+            alignItems='center'
+            sx={{ whiteSpace: 'nowrap' }}
+          >
             <Button
               size='small'
               variant={photo.likedByViewer ? 'contained' : 'outlined'}
@@ -551,7 +677,9 @@ export default function UserPhotos() {
                   likeMutation.mutate(photo._id);
                 }
               }}
-              startIcon={photo.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />}
+              startIcon={
+                photo.likedByViewer ? <FavoriteIcon /> : <FavoriteBorderIcon />
+              }
             >
               {photo.likedByViewer ? 'Unlike' : 'Like'}
             </Button>
@@ -571,6 +699,32 @@ export default function UserPhotos() {
           </Stack>
         </Box>
       </Paper>
+      {/* Confirmations - advanced mode */}
+      <ConfirmDialog
+        open={Boolean(confirmPhotoId)}
+        title='Delete Photo'
+        description='Are you sure you want to delete this photo?'
+        confirmText='Delete'
+        confirmColor='error'
+        loading={deletePhotoMutation?.isPending}
+        onCancel={() => setConfirmPhotoId(null)}
+        onConfirm={() => deletePhotoMutation.mutate(confirmPhotoId)}
+      />
+      <ConfirmDialog
+        open={Boolean(confirmComment)}
+        title='Delete Comment'
+        description='Are you sure you want to delete this comment?'
+        confirmText='Delete'
+        confirmColor='error'
+        loading={deleteCommentMutation?.isPending}
+        onCancel={() => setConfirmComment(null)}
+        onConfirm={() =>
+          deleteCommentMutation.mutate({
+            photoId: confirmComment.photoId,
+            commentId: confirmComment.commentId,
+          })
+        }
+      />
     </Box>
   );
 }
